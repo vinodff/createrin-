@@ -125,7 +125,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Clean White",
     category: "MINIMAL",
     fontFamily: "Inter, sans-serif",
-    fontSize: 60,
+    fontSize: 55, // Reduced from 60
     fontWeight: 700,
     textColor: "#FFFFFF",
     shadowColor: "rgba(0,0,0,0.8)",
@@ -141,7 +141,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "The Hormozi (Yel)",
     category: "BOLD",
     fontFamily: "Montserrat, sans-serif",
-    fontSize: 60,
+    fontSize: 55, // Reduced from 60
     fontWeight: 900,
     textColor: "#FFFF00", // Yellow
     activeTextColor: "#FFFFFF",
@@ -158,7 +158,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "The Hormozi (Grn)",
     category: "BOLD",
     fontFamily: "Montserrat, sans-serif",
-    fontSize: 60,
+    fontSize: 55, // Reduced from 60
     fontWeight: 900,
     textColor: "#00FF00", // Green
     activeTextColor: "#FFFFFF",
@@ -175,7 +175,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Mr. Beast",
     category: "BOLD",
     fontFamily: "Bangers, cursive",
-    fontSize: 72,
+    fontSize: 65, // Reduced from 72
     fontWeight: 400,
     textColor: "#FFFFFF",
     strokeColor: "#000000",
@@ -190,7 +190,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Neon Karaoke",
     category: "NEON",
     fontFamily: "Inter, sans-serif",
-    fontSize: 52,
+    fontSize: 48, // Reduced from 52
     fontWeight: 800,
     textColor: "rgba(255,255,255,0.3)", // Dimmed inactive
     activeTextColor: "#00E5FF", // Cyan glow active
@@ -203,7 +203,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Cyberpunk",
     category: "NEON",
     fontFamily: "Courier New, monospace",
-    fontSize: 56,
+    fontSize: 50, // Reduced from 56
     fontWeight: 700,
     textColor: "#FF0055",
     activeTextColor: "#00FF99",
@@ -217,7 +217,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Minimal Box",
     category: "MINIMAL",
     fontFamily: "Inter, sans-serif",
-    fontSize: 54,
+    fontSize: 50, // Reduced from 54
     fontWeight: 500,
     textColor: "#000000",
     backgroundColor: "rgba(255,255,255,0.95)",
@@ -232,7 +232,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Typewriter",
     category: "MINIMAL",
     fontFamily: "Courier New, monospace",
-    fontSize: 54,
+    fontSize: 50, // Reduced from 54
     fontWeight: 700,
     textColor: "#FFFFFF",
     backgroundColor: "#000000",
@@ -244,7 +244,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Desi Vlog",
     category: "ART",
     fontFamily: "'Noto Sans Devanagari', sans-serif",
-    fontSize: 54,
+    fontSize: 50, // Reduced from 54
     fontWeight: 700,
     textColor: "#FFFFFF",
     strokeColor: "#FF9933", // Saffron stroke
@@ -259,7 +259,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Thalaiva",
     category: "ART",
     fontFamily: "'Noto Sans Tamil', sans-serif",
-    fontSize: 56,
+    fontSize: 50, // Reduced from 56
     fontWeight: 700,
     textColor: "#FFD700", // Gold
     strokeColor: "#800000", // Maroon
@@ -271,7 +271,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Rapid Sprint",
     category: "BOLD",
     fontFamily: "Montserrat, sans-serif",
-    fontSize: 80, // Larger for single word
+    fontSize: 68, // Reduced from 80
     fontWeight: 900,
     textColor: "#FFFFFF",
     strokeColor: "#000000",
@@ -283,12 +283,12 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     uppercase: true,
     displayMode: "WORD"
   },
-  // --- NEW WORD-BY-WORD STYLES ---
+  // --- NEW WORD-BY-WORD STYLES (Recalibrated Sizes) ---
   [CaptionStyle.WORD_HORMOZI_FOCUS]: {
     name: "Hormozi Focus",
     category: "BOLD",
     fontFamily: "Montserrat, sans-serif",
-    fontSize: 72,
+    fontSize: 64, // Reduced from 72
     fontWeight: 900,
     textColor: "#FACC15", // Yellow-400
     strokeColor: "#000000",
@@ -304,7 +304,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Future Neon",
     category: "NEON",
     fontFamily: "'Orbitron', sans-serif",
-    fontSize: 64,
+    fontSize: 58, // Reduced from 64
     fontWeight: 900,
     textColor: "#FFFFFF",
     activeTextColor: "#00FFFF", // Cyan
@@ -318,7 +318,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Glitch Chaos",
     category: "NEON",
     fontFamily: "'Rubik Glitch', system-ui",
-    fontSize: 80,
+    fontSize: 70, // Reduced from 80
     fontWeight: 400,
     textColor: "#FF0044", // Red/Pink
     strokeColor: "#FFFFFF",
@@ -334,7 +334,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Retro Pixel",
     category: "ART",
     fontFamily: "'Press Start 2P', cursive",
-    fontSize: 54,
+    fontSize: 48, // Reduced from 54 (Pixel font needs to be legible but not massive)
     fontWeight: 400,
     textColor: "#4ADE80", // Green-400
     backgroundColor: "#000000",
@@ -347,7 +347,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Luxury Serif",
     category: "MINIMAL",
     fontFamily: "'Playfair Display', serif",
-    fontSize: 68,
+    fontSize: 58, // Reduced from 68
     fontWeight: 700,
     textColor: "#FCD34D", // Gold-300
     shadowColor: "rgba(0,0,0,0.5)",
@@ -359,7 +359,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Comic Impact",
     category: "ART",
     fontFamily: "'Luckiest Guy', cursive",
-    fontSize: 76,
+    fontSize: 66, // Reduced from 76
     fontWeight: 400,
     textColor: "#FFFFFF",
     strokeColor: "#000000",
@@ -374,7 +374,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Vlog Aesthetic",
     category: "ART",
     fontFamily: "'Caveat', cursive",
-    fontSize: 78,
+    fontSize: 70, // Reduced from 78
     fontWeight: 700,
     textColor: "#FFFFFF",
     shadowColor: "rgba(0,0,0,0.9)",
@@ -387,8 +387,8 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Sports Impact",
     category: "BOLD",
     fontFamily: "'Anton', sans-serif",
-    fontSize: 86,
-    fontWeight: 400, // Anton only has 400 but it looks bold
+    fontSize: 74, // Reduced from 86
+    fontWeight: 400, 
     textColor: "#FFFFFF",
     strokeColor: "#000000",
     strokeWidth: 4,
@@ -404,7 +404,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Game Streamer",
     category: "HIGHLIGHT",
     fontFamily: "'Fredoka', sans-serif",
-    fontSize: 74,
+    fontSize: 64, // Reduced from 74
     fontWeight: 700,
     textColor: "#FFFFFF",
     strokeColor: "#9333EA", // Purple-600
@@ -419,7 +419,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Noir Crime",
     category: "ART",
     fontFamily: "'Special Elite', cursive",
-    fontSize: 64,
+    fontSize: 58, // Reduced from 64
     fontWeight: 400,
     textColor: "#22C55E", // Green-500 (Hacker/Nightvision)
     backgroundColor: "#000000",
@@ -432,7 +432,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Insta Pop",
     category: "BOLD",
     fontFamily: "'Poppins', sans-serif",
-    fontSize: 70,
+    fontSize: 62, // Reduced from 70
     fontWeight: 800,
     textColor: "#FFFFFF",
     backgroundColor: "#000000",
@@ -446,10 +446,10 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Gradient Dream",
     category: "GLOW",
     fontFamily: "'Poppins', sans-serif",
-    fontSize: 76,
+    fontSize: 68, // Reduced from 76
     fontWeight: 900,
     textColor: "#FFFFFF",
-    gradientColors: ["#3B82F6", "#8B5CF6", "#EC4899"], // Blue -> Purple -> Pink
+    gradientColors: ["#3B82F6", "#8B5CF6", "#EC4899"], 
     shadowColor: "rgba(255,255,255,0.4)",
     shadowBlur: 15,
     animation: "POP",
@@ -460,12 +460,12 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Tape Highlight",
     category: "HIGHLIGHT",
     fontFamily: "'Permanent Marker', cursive",
-    fontSize: 68,
+    fontSize: 60, // Reduced from 68
     fontWeight: 400,
     textColor: "#000000",
     backgroundColor: "#FACC15", // Yellow
     backgroundPadding: 12,
-    rotationVariance: 4, // Messy rotation
+    rotationVariance: 4, 
     animation: "POP",
     displayMode: "WORD"
   },
@@ -473,7 +473,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Neon Storm",
     category: "NEON",
     fontFamily: "'Orbitron', sans-serif",
-    fontSize: 72,
+    fontSize: 64, // Reduced from 72
     fontWeight: 900,
     textColor: "#FFFFFF",
     strokeColor: "#06B6D4", // Cyan
@@ -489,7 +489,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Super 3D",
     category: "ART",
     fontFamily: "'Titan One', cursive",
-    fontSize: 80,
+    fontSize: 70, // Reduced from 80
     fontWeight: 400,
     textColor: "#F97316", // Orange-500
     strokeColor: "#FFFFFF",
@@ -505,7 +505,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Lyricist Outline",
     category: "NEON",
     fontFamily: "'Titan One', cursive",
-    fontSize: 76,
+    fontSize: 66, // Reduced from 76
     fontWeight: 400,
     textColor: "#34D399", // Green fill active
     strokeColor: "#34D399", // Green outline inactive
@@ -519,7 +519,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Clean Focus",
     category: "HIGHLIGHT",
     fontFamily: "'Nunito', sans-serif",
-    fontSize: 54,
+    fontSize: 50, // Reduced from 54
     fontWeight: 800,
     textColor: "#9CA3AF", // Inactive Gray-400
     activeTextColor: "#FFFFFF", // Active White
@@ -533,7 +533,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Cinematic Fade",
     category: "MINIMAL",
     fontFamily: "'Nunito', sans-serif",
-    fontSize: 56,
+    fontSize: 52, // Reduced from 56
     fontWeight: 800,
     textColor: "#FFFFFF",
     opacityInactive: 0.3, // Fade future words
@@ -547,7 +547,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Soft Glow",
     category: "GLOW",
     fontFamily: "'Poppins', sans-serif",
-    fontSize: 74,
+    fontSize: 66, // Reduced from 74
     fontWeight: 800,
     textColor: "#FFFFFF",
     shadowColor: "rgba(255, 255, 255, 0.9)", // Strong White Glow
@@ -560,7 +560,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Active Box",
     category: "HIGHLIGHT",
     fontFamily: "'Inter', sans-serif",
-    fontSize: 70,
+    fontSize: 62, // Reduced from 70
     fontWeight: 900,
     textColor: "#FFFFFF", // Inactive is white
     activeTextColor: "#000000", // Active is black
@@ -575,7 +575,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Standard Pop",
     category: "VIRAL",
     fontFamily: "'Montserrat', sans-serif",
-    fontSize: 72,
+    fontSize: 64, // Reduced from 72
     fontWeight: 900,
     textColor: "#FFFFFF", 
     strokeColor: "#000000",
@@ -591,7 +591,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Comic Loud",
     category: "VIRAL",
     fontFamily: "'Bangers', cursive",
-    fontSize: 84,
+    fontSize: 74, // Reduced from 84
     fontWeight: 400,
     textColor: "#FFD700", // Gold/Yellow Text
     strokeColor: "#000000",
@@ -607,7 +607,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Pro Clean",
     category: "VIRAL",
     fontFamily: "'Inter', sans-serif",
-    fontSize: 76,
+    fontSize: 68, // Reduced from 76
     fontWeight: 900,
     textColor: "#FFFFFF", 
     shadowColor: "#3B82F6", // Bright Blue Shadow
@@ -621,7 +621,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Loud Neon",
     category: "VIRAL",
     fontFamily: "'Orbitron', sans-serif",
-    fontSize: 70,
+    fontSize: 62, // Reduced from 70
     fontWeight: 900,
     textColor: "#FFFFFF", 
     strokeColor: "#FF00FF", // Magenta Stroke
@@ -636,7 +636,7 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     name: "Hyper Bold",
     category: "VIRAL",
     fontFamily: "'Anton', sans-serif",
-    fontSize: 88,
+    fontSize: 76, // Reduced from 88
     fontWeight: 400,
     textColor: "#FFFF00", // Bright Yellow Text
     strokeColor: "#000000",
@@ -648,6 +648,212 @@ export const STYLES_CONFIG: Record<CaptionStyle, StyleConfig> = {
     uppercase: true,
     displayMode: "WORD"
   },
+
+  // --- GLOW CATEGORY ---
+  [CaptionStyle.GLOW_DREAMY]: {
+    name: "Soft Dream",
+    category: "GLOW",
+    fontFamily: "'Poppins', sans-serif",
+    fontSize: 62, // Reduced from 70
+    fontWeight: 600,
+    textColor: "#FFFFFF",
+    shadowColor: "#F472B6", // Pink-400
+    shadowBlur: 30,
+    animation: "SCALE_UP",
+    displayMode: "WORD"
+  },
+  [CaptionStyle.GLOW_RADIOACTIVE]: {
+    name: "Radioactive",
+    category: "GLOW",
+    fontFamily: "'Orbitron', sans-serif",
+    fontSize: 60, // Reduced from 68
+    fontWeight: 900,
+    textColor: "#BEF264", // Lime-200
+    shadowColor: "#65A30D", // Lime-600
+    shadowBlur: 25,
+    animation: "POP",
+    uppercase: true,
+    displayMode: "WORD"
+  },
+  [CaptionStyle.GLOW_CYBER_BLUE]: {
+    name: "Cyber Blue",
+    category: "GLOW",
+    fontFamily: "'Nunito', sans-serif",
+    fontSize: 66, // Reduced from 74
+    fontWeight: 800,
+    textColor: "#E0F2FE", // Sky-100
+    shadowColor: "#0284C7", // Sky-600
+    shadowBlur: 40, // Heavy Blur
+    animation: "SCALE_UP",
+    displayMode: "WORD"
+  },
+  [CaptionStyle.GLOW_GOLDEN_HOUR]: {
+    name: "Golden Hour",
+    category: "GLOW",
+    fontFamily: "'Playfair Display', serif",
+    fontSize: 68, // Reduced from 76
+    fontWeight: 700,
+    textColor: "#FEF3C7", // Amber-100
+    shadowColor: "#F59E0B", // Amber-500
+    shadowBlur: 35,
+    animation: "SCALE_UP",
+    displayMode: "WORD"
+  },
+  [CaptionStyle.GLOW_DEEP_SPACE]: {
+    name: "Deep Space",
+    category: "GLOW",
+    fontFamily: "'Montserrat', sans-serif",
+    fontSize: 64, // Reduced from 72
+    fontWeight: 900,
+    textColor: "#FFFFFF",
+    shadowColor: "#4C1D95", // Violet-900
+    shadowBlur: 20,
+    shadowOffsetY: 0,
+    animation: "POP",
+    uppercase: true,
+    displayMode: "WORD"
+  },
+
+  // --- HIGHLIGHT CATEGORY ---
+  [CaptionStyle.HIGHLIGHT_MARKER]: {
+    name: "Yellow Marker",
+    category: "HIGHLIGHT",
+    fontFamily: "'Permanent Marker', cursive",
+    fontSize: 60, // Reduced from 68
+    fontWeight: 400,
+    textColor: "#000000",
+    backgroundColor: "#FDE047", // Yellow-300
+    backgroundPadding: 10,
+    rotationVariance: 3,
+    animation: "POP",
+    displayMode: "WORD"
+  },
+  [CaptionStyle.HIGHLIGHT_RED_TAPE]: {
+    name: "Red Tape",
+    category: "HIGHLIGHT",
+    fontFamily: "'Anton', sans-serif",
+    fontSize: 66, // Reduced from 74
+    fontWeight: 400,
+    textColor: "#FFFFFF",
+    backgroundColor: "#DC2626", // Red-600
+    backgroundPadding: 8,
+    rotationVariance: 2,
+    animation: "SCALE_UP",
+    uppercase: true,
+    displayMode: "WORD"
+  },
+  [CaptionStyle.HIGHLIGHT_BLACK_BOX]: {
+    name: "Bold Box",
+    category: "HIGHLIGHT",
+    fontFamily: "'Inter', sans-serif",
+    fontSize: 60, // Reduced from 66
+    fontWeight: 900,
+    textColor: "#FFFFFF",
+    backgroundColor: "#000000",
+    backgroundPadding: 16,
+    backgroundBorderRadius: 0, // Sharp edges
+    animation: "POP",
+    uppercase: true,
+    displayMode: "WORD"
+  },
+  [CaptionStyle.HIGHLIGHT_PAPER_CUT]: {
+    name: "Paper Cut",
+    category: "HIGHLIGHT",
+    fontFamily: "'Fredoka', sans-serif",
+    fontSize: 64, // Reduced from 72
+    fontWeight: 700,
+    textColor: "#000000",
+    backgroundColor: "#FFFFFF",
+    backgroundPadding: 12,
+    shadowColor: "rgba(0,0,0,0.5)",
+    shadowBlur: 5,
+    shadowOffsetY: 5,
+    animation: "SCALE_UP",
+    displayMode: "WORD"
+  },
+  [CaptionStyle.HIGHLIGHT_SKETCH]: {
+    name: "Sketchy",
+    category: "HIGHLIGHT",
+    fontFamily: "'Caveat', cursive",
+    fontSize: 70, // Reduced from 80
+    fontWeight: 700,
+    textColor: "#FFFFFF",
+    strokeColor: "#000000",
+    strokeWidth: 3,
+    backgroundColor: "#1F2937", // Gray-800
+    backgroundPadding: 10,
+    backgroundBorderRadius: 20, // Rough circle
+    animation: "POP",
+    displayMode: "WORD"
+  },
+
+  // --- KINETIC CATEGORY ---
+  [CaptionStyle.KINETIC_IMPACT]: {
+    name: "Impact Heavy",
+    category: "KINETIC",
+    fontFamily: "'Anton', sans-serif",
+    fontSize: 84, // Reduced from 96
+    fontWeight: 400,
+    textColor: "#FFFFFF",
+    strokeColor: "#000000",
+    strokeWidth: 8,
+    animation: "POP",
+    uppercase: true,
+    displayMode: "WORD"
+  },
+  [CaptionStyle.KINETIC_RAPID]: {
+    name: "Rapid Fire",
+    category: "KINETIC",
+    fontFamily: "'Montserrat', sans-serif",
+    fontSize: 74, // Reduced from 84
+    fontWeight: 900,
+    textColor: "#F97316", // Orange-500
+    strokeColor: "#FFFFFF",
+    strokeWidth: 4,
+    animation: "SCALE_UP",
+    uppercase: true,
+    displayMode: "WORD"
+  },
+  [CaptionStyle.KINETIC_STOMP]: {
+    name: "Stomp",
+    category: "KINETIC",
+    fontFamily: "'Titan One', cursive",
+    fontSize: 70, // Reduced from 80
+    fontWeight: 400,
+    textColor: "#FFFFFF",
+    shadowColor: "#000000",
+    shadowBlur: 0,
+    shadowOffsetY: 12, // Heavy stomp shadow
+    animation: "POP",
+    uppercase: true,
+    displayMode: "WORD"
+  },
+  [CaptionStyle.KINETIC_TILT]: {
+    name: "Tilt Pop",
+    category: "KINETIC",
+    fontFamily: "'Luckiest Guy', cursive",
+    fontSize: 78, // Reduced from 88
+    fontWeight: 400,
+    textColor: "#FACC15", // Yellow-400
+    strokeColor: "#000000",
+    strokeWidth: 6,
+    rotationVariance: 10, // High rotation
+    animation: "POP",
+    uppercase: true,
+    displayMode: "WORD"
+  },
+  [CaptionStyle.KINETIC_ZOOMER]: {
+    name: "Zoomer",
+    category: "KINETIC",
+    fontFamily: "'Inter', sans-serif",
+    fontSize: 90, // Reduced from 120
+    fontWeight: 900,
+    textColor: "rgba(255,255,255,0.9)",
+    animation: "SCALE_UP", // Relies on the lerp animation in App.tsx
+    uppercase: true,
+    displayMode: "WORD"
+  },
+
   [CaptionStyle.CUSTOM]: {
     name: "Custom Style",
     category: "CUSTOM",

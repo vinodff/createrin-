@@ -380,9 +380,10 @@ const App: React.FC = () => {
 
       if (autoAdjustEnabled) {
         if (activeCaption.customScale) finalFontScale *= activeCaption.customScale;
+        // Adjusted Bottom position to 70% to prevent overflow
         if (activeCaption.customPosition === 'TOP') finalVPos = 15;
         else if (activeCaption.customPosition === 'MIDDLE') finalVPos = 50;
-        else if (activeCaption.customPosition === 'BOTTOM') finalVPos = 85;
+        else if (activeCaption.customPosition === 'BOTTOM') finalVPos = 70; 
       }
 
       const scaleFactor = (canvas.height / 1000) * finalFontScale;
@@ -403,6 +404,13 @@ const App: React.FC = () => {
       const drawWord = (word: string, x: number, y: number, active: boolean, idx: number) => {
         ctx.save();
         ctx.translate(x, y);
+        
+        // Rotation for specific styles
+        if (style.rotationVariance && style.rotationVariance > 0) {
+            const rot = (idx % 2 === 0 ? 1 : -1) * style.rotationVariance * (Math.PI / 180);
+            ctx.rotate(rot);
+        }
+
         if (active && style.animation === 'POP') ctx.scale(1.15, 1.15);
         
         if (style.backgroundColor) {
@@ -438,8 +446,8 @@ const App: React.FC = () => {
       if (style.displayMode === 'WORD') {
         drawWord(words[activeWordIndex], anchorX, anchorY, true, activeWordIndex);
       } else {
-        // --- SAFE WRAPPING LOGIC ---
-        const maxWidth = canvas.width * 0.85; // 85% safe area
+        // --- SAFE WRAPPING LOGIC (BLOCK MODE) ---
+        const maxWidth = canvas.width * 0.8; // 80% safe width
         const lines: { text: string; words: string[]; startIndex: number }[] = [];
         let currentLineWords: string[] = [];
         let currentLineWidth = 0;
@@ -465,7 +473,27 @@ const App: React.FC = () => {
 
         const lineHeight = fontSize * 1.3;
         const totalHeight = lines.length * lineHeight;
-        let startY = anchorY - (totalHeight / 2) + (lineHeight / 2);
+        
+        // --- VERTICAL CLAMPING (SMART SAFETY ZONE) ---
+        // Prevent captions from dropping below 85% of screen height (UI Area)
+        // Prevent captions from going above 10% of screen height
+        const safeBottom = canvas.height * 0.85; 
+        const safeTop = canvas.height * 0.1;
+
+        let effectiveY = anchorY;
+        
+        // Check projected bounds
+        const projectedBottom = effectiveY + (totalHeight / 2);
+        const projectedTop = effectiveY - (totalHeight / 2);
+
+        // Shift if out of bounds
+        if (projectedBottom > safeBottom) {
+            effectiveY = safeBottom - (totalHeight / 2);
+        } else if (projectedTop < safeTop) {
+            effectiveY = safeTop + (totalHeight / 2);
+        }
+
+        let startY = effectiveY - (totalHeight / 2) + (lineHeight / 2);
 
         lines.forEach((line) => {
            const lineWidth = ctx.measureText(line.text).width;
@@ -628,7 +656,7 @@ const App: React.FC = () => {
                 {activeTab === 'PRESETS' ? (
                   <div className="space-y-6">
                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                      {['ALL', 'BOLD', 'NEON', 'MINIMAL', 'ART', 'GLOW', 'VIRAL'].map(cat => (
+                      {['ALL', 'BOLD', 'NEON', 'MINIMAL', 'ART', 'GLOW', 'HIGHLIGHT', 'KINETIC', 'VIRAL'].map(cat => (
                         <button key={cat} onClick={() => setFilterCategory(cat)} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${filterCategory === cat ? 'bg-white text-black border-white' : 'bg-gray-900 text-gray-500 border-gray-800 hover:border-gray-600'}`}>{cat}</button>
                       ))}
                     </div>
