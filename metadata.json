@@ -1,0 +1,8 @@
+{
+  "name": "CapGen AI",
+  "description": "AI-powered caption generator for short-form video creators focused on Indian regional languages.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}
