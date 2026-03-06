@@ -1,7 +1,8 @@
 import { CaptionStyle, StyleConfig } from './types';
 
 export const MAX_VIDEO_DURATION_SEC = 300; // 5 minutes
-export const GEMINI_MODEL = "gemini-3-pro-preview";
+// Changed to 1.5-flash for stability (Fixes RPC 500 errors) and speed
+export const GEMINI_MODEL = "gemini-1.5-flash";
 
 export const SYSTEM_INSTRUCTION = `
 You are an expert subtitle generator for viral short-form videos (Reels, TikTok, YouTube Shorts).
@@ -93,18 +94,23 @@ Include 'custom_scale' (number) and 'custom_position' (string) in every item.
 `;
 
 export const SMART_COMPRESSION_INSTRUCTION = `
-**SMART SENTENCE COMPRESSION RULES (Aggressive Editing):**
-You are a professional video editor. Your goal is MAXIMAL RETENTION.
-Do not transcribe verbatim. REWRITE the spoken audio into punchy captions.
+**SMART SENTENCE COMPRESSION (Language Preserving):**
+You are a professional script doctor. Your goal is MAXIMAL RETENTION via brevity.
 
-1. **Strict Length Limit:** Max 3-5 words per segment.
-2. **Compression Logic:**
-   - Remove long explanations. Keep the core meaning.
-   - "So basically what I am trying to say is..." -> "The TRUTH is..."
-   - "If you do not post every single day..." -> "No daily posts..."
-   - "Then your growth is going to be very slow" -> "...Slow growth 📉"
-3. **Style:** Use symbols (=, +, ->) instead of words where possible to save space.
-4. **Tone:** Direct, high-impact, active voice.
+**CORE RULES:**
+1. **NO LANGUAGE SWAPPING:** You must compress the text using the **SAME LANGUAGE** as the spoken audio or the defined Language Mode.
+   - If mode is **TELGLISH**, compress into shorter **Telglish** (e.g. "Chala pedda problem" -> "BIG Problem ⚠️").
+   - If mode is **TELUGU**, compress into shorter **Telugu** (e.g. "Cheppalsina avasaram ledu" -> "Cheppakkarledu!").
+   - **DO NOT** translate regional languages into English unless explicitly told.
+
+2. **COMPRESSION LOGIC:**
+   - **Simplify:** "Basically what I am trying to say is..." -> "The TRUTH is..."
+   - **Directness:** "If you do not post every single day" -> "No Daily Posts? ❌"
+   - **Symbols:** Use =, +, ->, vs, w/ to save space.
+
+3. **IMPACT REWRITING:**
+   - Convert passive voice to active.
+   - Use slang/short-forms appropriate for the specific language.
 `;
 
 export const VIRAL_REWRITE_INSTRUCTION = `

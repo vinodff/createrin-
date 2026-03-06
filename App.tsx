@@ -1,10 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Upload, Play, Pause, Download, Wand2, Type, Music, Video, Loader2, Grid, Zap, Smile, Sparkles, Maximize2, ArrowUpDown, Palette, ToggleLeft, ToggleRight, Camera, Move, Volume2, Scissors, Globe, AlignLeft, AlignCenter, AlignRight, Square, Layers, MousePointer2 } from 'lucide-react';
+import { Upload, Play, Pause, Download, Wand2, Type, Music, Video, Loader2, Grid, Zap, Smile, Sparkles, Maximize2, ArrowUpDown, Palette, ToggleLeft, ToggleRight, Camera, Move, Volume2, Scissors, Globe, AlignLeft, AlignCenter, AlignRight, Square, Layers, MousePointer2, RefreshCw, ChevronRight, Check, Image as ImageIcon, Share2, UploadCloud, Key } from 'lucide-react';
 import { Caption, CaptionStyle, ProcessingStatus, ProcessingStats, StyleConfig, DisplayMode, LanguageMode, TextAlign } from './types';
 import { STYLES_CONFIG } from './constants';
 import { generateCaptionsFromVideo } from './services/geminiService';
 import ProjectSpecs from './components/ProjectSpecs';
 import ProcessingChart from './components/ProcessingChart';
+import ThumbnailEditor from './components/ThumbnailEditor';
+import SeoGenerator from './components/SeoGenerator';
+import SocialPublisher from './components/SocialPublisher';
+import ApiKeySelector from './components/ApiKeySelector';
 import lottie from 'lottie-web';
 
 // --- ANIMATION UTILS ---
@@ -65,6 +69,9 @@ class SoundEngine {
 }
 
 const App: React.FC = () => {
+  // API Key State
+  const [apiKey, setApiKey] = useState<string | null>(localStorage.getItem('createrin_api_key'));
+
   // Video & Process States
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -75,9 +82,12 @@ const App: React.FC = () => {
   const [stats, setStats] = useState<ProcessingStats | null>(null);
   const [exportProgress, setExportProgress] = useState(0);
 
-  // UI Tabs
+  // UI Tabs & Modals
   const [activeTab, setActiveTab] = useState<'PRESETS' | 'DESIGN'>('PRESETS');
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
+  const [isThumbnailEditorOpen, setIsThumbnailEditorOpen] = useState(false);
+  const [isSeoModalOpen, setIsSeoModalOpen] = useState(false);
+  const [isPublisherOpen, setIsPublisherOpen] = useState(false);
 
   // Feature Toggles
   const [autoAdjustEnabled, setAutoAdjustEnabled] = useState(true);
@@ -85,7 +95,6 @@ const App: React.FC = () => {
   const [autoSfxEnabled, setAutoSfxEnabled] = useState(false);
   const [smartCompressionEnabled, setSmartCompressionEnabled] = useState(false);
   const [languageMode, setLanguageMode] = useState<LanguageMode>('AUTO');
-  const [isAnimatedEmoji, setIsAnimatedEmoji] = useState(false);
   const [sfxVolume, setSfxVolume] = useState<'LOW' | 'MED' | 'HIGH'>('MED');
 
   // CUSTOM DESIGN OVERRIDES
@@ -95,7 +104,7 @@ const App: React.FC = () => {
   const [fontScale, setFontScale] = useState(1);
   const [textColor, setTextColor] = useState('#FFFFFF');
   const [textAlign, setTextAlign] = useState<TextAlign>('center');
-  const [verticalPos, setVerticalPos] = useState(75);
+  const [verticalPos, setVerticalPos] = useState(70); // Default safer position (70%)
   const [horizontalPos, setHorizontalPos] = useState(50);
   const [strokeWidth, setStrokeWidth] = useState(0);
   const [strokeColor, setStrokeColor] = useState('#000000');
@@ -112,7 +121,11 @@ const App: React.FC = () => {
   const soundEngine = useRef(new SoundEngine());
   const currentZoomRef = useRef(1.0);
   const lastPlayedCaptionId = useRef<string | null>(null);
-  const emojiCache = useRef<Record<string, any>>({});
+
+  const resetApiKey = () => {
+    localStorage.removeItem('createrin_api_key');
+    setApiKey(null);
+  };
 
   // Memoized Active Configuration (Preset + Overrides)
   const activeConfig = useMemo(() => {
@@ -166,7 +179,7 @@ const App: React.FC = () => {
       
       // Reset defaults on new video
       setFontScale(1);
-      setVerticalPos(75);
+      setVerticalPos(70);
       setHorizontalPos(50);
       setCurrentStyle(CaptionStyle.DEFAULT);
     }
@@ -295,7 +308,7 @@ const App: React.FC = () => {
         a.style.display = 'none';
         a.href = url;
         const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-        a.download = `capgen-export-${Date.now()}.${ext}`;
+        a.download = `createrin-export-${Date.now()}.${ext}`;
         document.body.appendChild(a);
         a.click();
         
@@ -475,10 +488,10 @@ const App: React.FC = () => {
         const totalHeight = lines.length * lineHeight;
         
         // --- VERTICAL CLAMPING (SMART SAFETY ZONE) ---
-        // Prevent captions from dropping below 85% of screen height (UI Area)
-        // Prevent captions from going above 10% of screen height
-        const safeBottom = canvas.height * 0.85; 
-        const safeTop = canvas.height * 0.1;
+        // 25% padding from bottom (Safe for Reels/TikTok UI)
+        // 15% padding from top (Safe for status bar/camera)
+        const safeBottom = canvas.height * 0.75; 
+        const safeTop = canvas.height * 0.15;
 
         let effectiveY = anchorY;
         
@@ -513,7 +526,7 @@ const App: React.FC = () => {
     // Draw Export Watermark
     if (status === 'EXPORTING') {
        ctx.save();
-       const logoText = "capgen.ai";
+       const logoText = "createrin.com";
        const logoFontSize = Math.max(24, canvas.height * 0.04); 
        const padding = Math.max(20, canvas.height * 0.03);
        ctx.font = `900 ${logoFontSize}px 'Inter', sans-serif`;
@@ -535,41 +548,126 @@ const App: React.FC = () => {
     loop();
   }, [drawCanvas]);
 
+  if (!apiKey) {
+    return <ApiKeySelector onSelect={(k) => {
+      localStorage.setItem('createrin_api_key', k);
+      setApiKey(k);
+    }} />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#121212] text-white font-sans overflow-hidden">
-      <ProjectSpecs />
       
-      <header className="border-b border-gray-800 p-4 flex justify-between items-center bg-[#1a1a1a] z-50">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-            <Type size={20} className="text-white" />
+      {/* MODALS */}
+      {isThumbnailEditorOpen && videoSrc && (
+          <ThumbnailEditor 
+            videoSrc={videoSrc}
+            captions={captions}
+            onClose={() => setIsThumbnailEditorOpen(false)}
+          />
+      )}
+      
+      {isSeoModalOpen && (
+          <SeoGenerator 
+            captions={captions}
+            onClose={() => setIsSeoModalOpen(false)}
+          />
+      )}
+
+      {isPublisherOpen && videoSrc && (
+          <SocialPublisher
+            videoSrc={videoSrc}
+            onClose={() => setIsPublisherOpen(false)}
+            captions={captions}
+          />
+      )}
+
+      {/* Simplified Header */}
+      <header className="border-b border-gray-800 p-4 flex justify-between items-center bg-[#1a1a1a] z-50 shadow-lg">
+        <div className="flex items-center gap-4">
+          <div className="relative flex items-center">
+            {/* Logo Image */}
+            <img 
+              src="https://createrin.com/wp-content/uploads/2025/03/createrin_logo.jpg" 
+              alt="Createrin" 
+              className="h-10 w-auto rounded-lg object-contain bg-white"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                // Show text fallback when image fails
+                const fallback = document.getElementById('logo-fallback-text');
+                if (fallback) fallback.classList.remove('hidden');
+              }}
+            />
+            {/* Text Fallback (Hidden by default, shown via onError) */}
+            <h1 id="logo-fallback-text" className="hidden text-3xl font-black tracking-tight text-[#009ca6] leading-none">
+              createrin
+            </h1>
           </div>
-          <h1 className="text-xl font-bold tracking-tight">CapGen <span className="text-blue-500">AI</span></h1>
-        </div>
-        {status === 'READY' && (
-          <button onClick={handleExport} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-full font-bold transition-all text-sm shadow-lg shadow-blue-500/20">
-            <Download size={16} /> Export
+          <button 
+            onClick={resetApiKey}
+            className="p-1.5 bg-gray-800 hover:bg-red-900/50 rounded-lg text-gray-500 hover:text-red-400 transition-colors"
+            title="Reset API Key"
+          >
+            <Key size={12} />
           </button>
-        )}
+        </div>
+        <div className="flex items-center gap-3">
+          {status === 'READY' && (
+            <>
+              <button 
+                onClick={() => setIsThumbnailEditorOpen(true)}
+                className="flex items-center gap-2 bg-gray-800 text-white hover:bg-gray-700 px-4 py-2.5 rounded-full font-bold transition-all text-xs border border-gray-700"
+              >
+                <ImageIcon size={16} /> <span className="hidden sm:inline">Thumbnail</span>
+              </button>
+              <button 
+                onClick={() => setIsSeoModalOpen(true)}
+                className="flex items-center gap-2 bg-gray-800 text-white hover:bg-gray-700 px-4 py-2.5 rounded-full font-bold transition-all text-xs border border-gray-700"
+              >
+                <Share2 size={16} /> <span className="hidden sm:inline">SEO</span>
+              </button>
+              <button 
+                onClick={() => setIsPublisherOpen(true)}
+                className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-500 px-4 py-2.5 rounded-full font-bold transition-all text-xs border border-blue-500 shadow-lg shadow-blue-600/20"
+              >
+                <UploadCloud size={16} /> <span className="hidden sm:inline">Publish</span>
+              </button>
+              <button 
+                onClick={handleExport} 
+                className="flex items-center gap-2 bg-white text-black hover:bg-gray-200 px-6 py-2.5 rounded-full font-black transition-all text-sm shadow-xl active:scale-95"
+              >
+                <Download size={18} /> <span className="hidden sm:inline">Export</span>
+              </button>
+            </>
+          )}
+        </div>
       </header>
 
-      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Preview Area */}
-        <div className="flex-1 p-8 flex items-center justify-center bg-[#0a0a0a] relative overflow-hidden">
+      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+        {/* Main Preview Area */}
+        <div className="flex-1 flex items-center justify-center bg-[#050505] relative overflow-hidden p-4 lg:p-8">
+          {/* Background Grid Pattern */}
+          <div className="absolute inset-0 opacity-20 pointer-events-none" 
+               style={{ backgroundImage: 'radial-gradient(#333 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
+          </div>
+
           {!videoSrc ? (
-            <div className="w-full max-w-md h-[500px] border-2 border-dashed border-gray-800 rounded-3xl flex flex-col items-center justify-center text-gray-500 bg-[#151515] group transition-all hover:border-blue-500/50">
-              <div className="w-20 h-20 bg-gray-900 rounded-full flex items-center justify-center mb-6 border border-gray-800 group-hover:bg-blue-500/10 group-hover:border-blue-500/30">
-                <Upload size={32} className="text-gray-600 group-hover:text-blue-400" />
+            <div className="z-10 w-full max-w-md aspect-[3/4] border-2 border-dashed border-gray-800 rounded-[2rem] flex flex-col items-center justify-center text-gray-500 bg-[#151515]/50 backdrop-blur-sm group transition-all hover:border-blue-500/50 hover:bg-[#151515]">
+              <div className="w-24 h-24 bg-gradient-to-tr from-gray-800 to-gray-900 rounded-full flex items-center justify-center mb-8 border border-gray-700 shadow-2xl group-hover:scale-110 transition-transform duration-300">
+                <Upload size={40} className="text-gray-400 group-hover:text-blue-400 transition-colors" />
               </div>
-              <p className="text-xl font-bold text-white mb-2">Upload Short Video</p>
-              <p className="text-sm text-gray-600 mb-8 px-10 text-center">Drag and drop or click to select a vertical video for reels/shorts</p>
-              <label className="bg-white text-black px-8 py-3 rounded-full font-black cursor-pointer hover:bg-gray-200 active:scale-95 transition-all shadow-xl">
-                Choose Video
+              <h2 className="text-2xl font-black text-white mb-3">Upload Video</h2>
+              <p className="text-sm text-gray-500 mb-8 px-12 text-center leading-relaxed">
+                Drag & drop or select a vertical video (9:16) for Reels, TikTok, or Shorts.
+              </p>
+              <label className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3.5 rounded-xl font-bold cursor-pointer active:scale-95 transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2">
+                <Video size={18} />
+                Select File
                 <input type="file" accept="video/*" onChange={handleFileUpload} className="hidden" />
               </label>
             </div>
           ) : (
-            <div className="relative w-full max-w-[360px] aspect-[9/16] bg-black rounded-[32px] shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden border-[8px] border-[#1a1a1a]">
+            <div className="relative h-full max-h-[85vh] aspect-[9/16] bg-black rounded-[2rem] shadow-2xl overflow-hidden border-[6px] border-[#222] ring-1 ring-white/10 z-20">
               <video 
                 ref={videoRef} 
                 src={videoSrc} 
@@ -584,25 +682,32 @@ const App: React.FC = () => {
                 onClick={togglePlay} 
               />
               
+              {/* Overlay Controls */}
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-4 px-6 py-3 bg-black/60 backdrop-blur-md rounded-full border border-white/10 transition-opacity hover:opacity-100 opacity-0 group-hover:opacity-100">
+                 <button onClick={togglePlay} className="text-white hover:text-blue-400 transition-colors">
+                    {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
+                 </button>
+              </div>
+
               {(status === 'UPLOADING' || status === 'TRANSCRIBING' || status === 'EXPORTING') && (
-                <div className="absolute inset-0 bg-black/90 z-20 flex flex-col items-center justify-center text-center p-8 backdrop-blur-xl">
-                  <div className="relative mb-8">
-                    <Loader2 size={64} className="animate-spin text-blue-500" />
-                    <Zap size={24} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-300" />
+                <div className="absolute inset-0 bg-black/80 z-50 flex flex-col items-center justify-center text-center p-8 backdrop-blur-md">
+                  <div className="relative mb-6">
+                    <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
+                    <Loader2 size={56} className="animate-spin text-blue-500 relative z-10" />
                   </div>
-                  <h3 className="text-2xl font-black text-white mb-2">
-                    {status === 'EXPORTING' ? `Rendering ${exportProgress}%` : (status === 'UPLOADING' ? 'Uploading...' : 'AI Transcribing...')}
+                  <h3 className="text-xl font-black text-white mb-2 tracking-tight">
+                    {status === 'EXPORTING' ? 'Finalizing Video...' : (status === 'UPLOADING' ? 'Uploading Media...' : 'AI Transcribing...')}
                   </h3>
-                  <p className="text-gray-400 text-sm leading-relaxed">
-                    {status === 'EXPORTING' ? 'Burning captions and optimizing...' : 'Processing audio and optimizing for viral reach.'}
+                  <p className="text-gray-400 text-xs font-medium max-w-[200px]">
+                    {status === 'EXPORTING' ? `Burning captions: ${exportProgress}%` : 'Analyzing speech patterns and generating viral captions.'}
                   </p>
                 </div>
               )}
               
               {status === 'READY' && !isPlaying && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
-                  <div className="w-20 h-20 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/20">
-                    <Play size={40} className="text-white fill-white ml-2" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
+                  <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 shadow-2xl animate-pulse">
+                    <Play size={36} className="text-white fill-white ml-2" />
                   </div>
                 </div>
               )}
@@ -610,36 +715,71 @@ const App: React.FC = () => {
           )}
         </div>
 
-        {/* Control Sidebar */}
-        <div className="w-full lg:w-[480px] bg-[#1a1a1a] border-l border-gray-800 flex flex-col shadow-2xl z-40">
+        {/* Right Sidebar */}
+        <div className="w-full lg:w-[420px] bg-[#161616] border-l border-gray-800 flex flex-col z-30 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+          
+          {/* Initial Generation State */}
           {videoSrc && status === 'IDLE' && (
-             <div className="p-6 space-y-6">
+             <div className="flex-1 p-8 flex flex-col justify-center space-y-8">
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-xs font-black text-gray-500 uppercase tracking-widest"><Globe size={14} className="text-blue-500" /> Language Style</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['AUTO', 'ENGLISH', 'PURE_TELUGU', 'TELGLISH'].map(m => (
-                      <button key={m} onClick={() => setLanguageMode(m as any)} className={`p-3 rounded-xl border text-[10px] font-bold transition-all ${languageMode === m ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700'}`}>
-                        {m === 'AUTO' ? 'Auto (All)' : m.replace('_', ' ')}
+                  <div className="flex items-center gap-2 text-xs font-black text-gray-500 uppercase tracking-widest mb-2">
+                     <Globe size={14} className="text-blue-500" /> Source Language
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { id: 'AUTO', label: 'Auto Detect', desc: 'Best for mixed audio' },
+                      { id: 'ENGLISH', label: 'English Only', desc: 'Strict English output' },
+                      { id: 'PURE_TELUGU', label: 'Pure Telugu', desc: 'Telugu script only' },
+                      { id: 'TELGLISH', label: 'Telglish', desc: 'Telugu + English script' }
+                    ].map(m => (
+                      <button 
+                        key={m.id} 
+                        onClick={() => setLanguageMode(m.id as any)} 
+                        className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden group ${languageMode === m.id ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-500/20' : 'bg-gray-900 border-gray-800 hover:border-gray-700'}`}
+                      >
+                        <div className={`font-bold text-sm mb-1 ${languageMode === m.id ? 'text-white' : 'text-gray-300'}`}>{m.label}</div>
+                        <div className={`text-[10px] ${languageMode === m.id ? 'text-blue-200' : 'text-gray-600'}`}>{m.desc}</div>
+                        {languageMode === m.id && <div className="absolute top-2 right-2"><Check size={14} /></div>}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div className="space-y-3">
-                   {[
-                     { id: 'adj', label: 'Auto Adjust', icon: <Wand2 size={16}/>, state: autoAdjustEnabled, toggle: setAutoAdjustEnabled, desc: 'Optimized sizing & position' },
-                     { id: 'comp', label: 'Smart Compression', icon: <Scissors size={16}/>, state: smartCompressionEnabled, toggle: setSmartCompressionEnabled, desc: 'Shorter, punchy sentences' }
-                   ].map(f => (
-                     <div key={f.id} className="bg-gray-900 border border-gray-800 p-4 rounded-2xl flex items-center justify-between hover:border-gray-700 transition-all">
-                       <div className="flex items-center gap-4">
-                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${f.state ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-800 text-gray-500'}`}>{f.icon}</div>
-                         <div><p className="text-sm font-bold text-white">{f.label}</p><p className="text-[10px] text-gray-500">{f.desc}</p></div>
-                       </div>
-                       <button onClick={() => f.toggle(!f.state)}>{f.state ? <ToggleRight size={36} className="text-blue-500" /> : <ToggleLeft size={36} className="text-gray-700" />}</button>
-                     </div>
-                   ))}
+
+                <div className="space-y-4">
+                   <div className="flex items-center gap-2 text-xs font-black text-gray-500 uppercase tracking-widest mb-2">
+                      <Sparkles size={14} className="text-purple-500" /> AI Enhancements
+                   </div>
+                   <div className="space-y-3">
+                     {[
+                       { id: 'adj', label: 'Auto Framing', icon: <Wand2 size={18}/>, state: autoAdjustEnabled, toggle: setAutoAdjustEnabled, desc: 'Smartly positions text to avoid faces' },
+                       { id: 'comp', label: 'Smart Brevity', icon: <Scissors size={18}/>, state: smartCompressionEnabled, toggle: setSmartCompressionEnabled, desc: 'Shortens sentences for higher retention' }
+                     ].map(f => (
+                       <button 
+                        key={f.id} 
+                        onClick={() => f.toggle(!f.state)}
+                        className={`w-full p-4 rounded-2xl border flex items-center justify-between transition-all ${f.state ? 'bg-gray-800 border-blue-500/50' : 'bg-gray-900 border-gray-800 hover:border-gray-700'}`}
+                       >
+                         <div className="flex items-center gap-4">
+                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${f.state ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-800 text-gray-600'}`}>{f.icon}</div>
+                           <div className="text-left">
+                             <p className={`text-sm font-bold ${f.state ? 'text-white' : 'text-gray-400'}`}>{f.label}</p>
+                             <p className="text-[10px] text-gray-500">{f.desc}</p>
+                           </div>
+                         </div>
+                         <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${f.state ? 'bg-blue-500 border-blue-500' : 'border-gray-700'}`}>
+                           {f.state && <Check size={14} className="text-white" />}
+                         </div>
+                       </button>
+                     ))}
+                   </div>
                 </div>
-                <button onClick={handleGenerateCaptions} className="w-full bg-white text-black py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl hover:bg-gray-100">
-                  <Sparkles size={20} /> Generate Captions
+
+                <button 
+                  onClick={handleGenerateCaptions} 
+                  className="w-full bg-white text-black py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl hover:bg-gray-200"
+                >
+                  <Sparkles size={20} className="text-yellow-500 fill-yellow-500" /> 
+                  Generate Captions
                 </button>
              </div>
           )}
@@ -647,29 +787,33 @@ const App: React.FC = () => {
           {status === 'READY' && (
             <div className="flex flex-col h-full">
               {/* Tab Header */}
-              <div className="flex border-b border-gray-800">
-                 <button onClick={() => setActiveTab('PRESETS')} className={`flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'PRESETS' ? 'text-blue-500 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>Presets</button>
-                 <button onClick={() => setActiveTab('DESIGN')} className={`flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'DESIGN' ? 'text-blue-500 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>Design</button>
+              <div className="flex border-b border-gray-800 bg-[#161616] sticky top-0 z-10">
+                 <button onClick={() => setActiveTab('PRESETS')} className={`flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'PRESETS' ? 'text-white border-blue-500 bg-gray-800' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>Templates</button>
+                 <button onClick={() => setActiveTab('DESIGN')} className={`flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'DESIGN' ? 'text-white border-blue-500 bg-gray-800' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>Customize</button>
               </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[#121212]">
                 {activeTab === 'PRESETS' ? (
                   <div className="space-y-6">
                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                       {['ALL', 'BOLD', 'NEON', 'MINIMAL', 'ART', 'GLOW', 'HIGHLIGHT', 'KINETIC', 'VIRAL'].map(cat => (
-                        <button key={cat} onClick={() => setFilterCategory(cat)} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${filterCategory === cat ? 'bg-white text-black border-white' : 'bg-gray-900 text-gray-500 border-gray-800 hover:border-gray-600'}`}>{cat}</button>
+                        <button key={cat} onClick={() => setFilterCategory(cat)} className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all whitespace-nowrap ${filterCategory === cat ? 'bg-white text-black border-white' : 'bg-gray-800 text-gray-500 border-gray-700 hover:border-gray-500'}`}>{cat}</button>
                       ))}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       {Object.entries(STYLES_CONFIG)
                         .filter(([_, config]) => filterCategory === 'ALL' || config.category === filterCategory)
                         .map(([key, config]) => (
-                        <button key={key} onClick={() => selectPreset(key as CaptionStyle)} className={`p-4 rounded-2xl border transition-all text-left group relative overflow-hidden ${currentStyle === key ? 'bg-blue-600/10 border-blue-500 ring-1 ring-blue-500/50' : 'bg-gray-900 border-gray-800 hover:border-gray-700'}`}>
-                          <div className="w-12 h-12 rounded-lg flex items-center justify-center text-xl font-black mb-3" style={{ background: config.gradientColors ? `linear-gradient(45deg, ${config.gradientColors.join(',')})` : (config.backgroundColor || '#333'), color: config.textColor, fontFamily: config.fontFamily }}>Aa</div>
-                          <p className="text-[10px] font-black uppercase text-gray-300 truncate">{config.name}</p>
+                        <button key={key} onClick={() => selectPreset(key as CaptionStyle)} className={`p-4 rounded-2xl border transition-all text-left group relative overflow-hidden ${currentStyle === key ? 'bg-gray-800 border-blue-500 ring-1 ring-blue-500' : 'bg-gray-900 border-gray-800 hover:border-gray-700'}`}>
+                          <div className="w-full aspect-[2/1] rounded-lg flex items-center justify-center text-2xl font-black mb-3 bg-[#000000]" style={{ background: config.gradientColors ? `linear-gradient(45deg, ${config.gradientColors.join(',')})` : '#000', color: config.textColor, fontFamily: config.fontFamily }}>
+                             <span style={{ 
+                                textShadow: config.shadowBlur ? `0 0 ${config.shadowBlur}px ${config.shadowColor}` : 'none',
+                                WebkitTextStroke: config.strokeWidth ? `${config.strokeWidth/2}px ${config.strokeColor}` : 'none'
+                             }}>Aa</span>
+                          </div>
+                          <p className={`text-[11px] font-bold uppercase truncate ${currentStyle === key ? 'text-white' : 'text-gray-400'}`}>{config.name}</p>
                           <div className="mt-2 flex gap-1">
-                            <span className="text-[8px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 font-bold uppercase">{config.displayMode}</span>
-                            <span className="text-[8px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 font-bold uppercase">{config.animation}</span>
+                            <span className="text-[8px] px-1.5 py-0.5 rounded bg-black/40 text-gray-500 font-bold uppercase">{config.displayMode}</span>
                           </div>
                         </button>
                       ))}
@@ -679,11 +823,11 @@ const App: React.FC = () => {
                   <div className="space-y-8 pb-10">
                     {/* Typography Group */}
                     <section className="space-y-4">
-                       <div className="flex items-center gap-2 text-xs font-black text-blue-500 uppercase tracking-widest"><Type size={14} /> Typography</div>
-                       <div className="grid grid-cols-1 gap-3">
-                          <div className="space-y-1.5">
+                       <div className="flex items-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest border-b border-gray-800 pb-2"><Type size={14} className="text-blue-500" /> Typography</div>
+                       <div className="grid grid-cols-1 gap-4">
+                          <div className="space-y-2">
                              <label className="text-[10px] font-bold text-gray-500 uppercase">Font Family</label>
-                             <select value={fontFamily} onChange={e => setFontFamily(e.target.value)} className="w-full bg-gray-900 border border-gray-800 p-3 rounded-xl text-sm font-medium focus:ring-1 focus:ring-blue-500 outline-none">
+                             <select value={fontFamily} onChange={e => setFontFamily(e.target.value)} className="w-full bg-gray-900 border border-gray-800 p-3 rounded-xl text-sm font-medium focus:ring-1 focus:ring-blue-500 outline-none text-white">
                                 <option value="Inter, sans-serif">Modern Sans (Inter)</option>
                                 <option value="Montserrat, sans-serif">Bold Dynamic (Montserrat)</option>
                                 <option value="Bangers, cursive">Comic/Hero (Bangers)</option>
@@ -699,20 +843,20 @@ const App: React.FC = () => {
                              </div>
                              <div className="space-y-2">
                                 <label className="flex justify-between text-[10px] font-bold text-gray-500 uppercase">Weight <span>{fontWeight}</span></label>
-                                <select value={fontWeight} onChange={e => setFontWeight(e.target.value)} className="w-full bg-gray-900 border border-gray-800 p-2 rounded-lg text-xs font-bold outline-none">
+                                <select value={fontWeight} onChange={e => setFontWeight(e.target.value)} className="w-full bg-gray-900 border border-gray-800 p-2 rounded-lg text-xs font-bold outline-none text-white">
                                    {[400, 600, 800, 900].map(w => <option key={w} value={w}>{w}</option>)}
                                 </select>
                              </div>
                           </div>
                           <div className="flex gap-2">
-                             <button onClick={() => setUppercase(!uppercase)} className={`flex-1 py-2 rounded-xl text-[10px] font-black border transition-all ${uppercase ? 'bg-blue-500 border-blue-500' : 'bg-gray-900 border-gray-800 text-gray-500'}`}>UPPERCASE</button>
-                             <div className="flex rounded-xl overflow-hidden border border-gray-800">
+                             <button onClick={() => setUppercase(!uppercase)} className={`flex-1 py-3 rounded-xl text-[10px] font-black border transition-all ${uppercase ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-900 border-gray-800 text-gray-500'}`}>ABC</button>
+                             <div className="flex flex-[2] rounded-xl overflow-hidden border border-gray-800 bg-gray-900">
                                 {[
-                                   { id: 'left', icon: <AlignLeft size={14}/> },
-                                   { id: 'center', icon: <AlignCenter size={14}/> },
-                                   { id: 'right', icon: <AlignRight size={14}/> }
+                                   { id: 'left', icon: <AlignLeft size={16}/> },
+                                   { id: 'center', icon: <AlignCenter size={16}/> },
+                                   { id: 'right', icon: <AlignRight size={16}/> }
                                 ].map(a => (
-                                   <button key={a.id} onClick={() => setTextAlign(a.id as any)} className={`p-2 flex-1 flex justify-center ${textAlign === a.id ? 'bg-white text-black' : 'bg-gray-900 text-gray-500 hover:text-gray-300'}`}>{a.icon}</button>
+                                   <button key={a.id} onClick={() => setTextAlign(a.id as any)} className={`flex-1 flex items-center justify-center transition-colors ${textAlign === a.id ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'}`}>{a.icon}</button>
                                 ))}
                              </div>
                           </div>
@@ -721,24 +865,28 @@ const App: React.FC = () => {
 
                     {/* Colors & Appearance */}
                     <section className="space-y-4">
-                       <div className="flex items-center gap-2 text-xs font-black text-pink-500 uppercase tracking-widest"><Palette size={14} /> Colors & Visuals</div>
-                       <div className="space-y-4 bg-gray-900/50 p-4 rounded-2xl border border-gray-800">
+                       <div className="flex items-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest border-b border-gray-800 pb-2"><Palette size={14} className="text-pink-500" /> Appearance</div>
+                       <div className="space-y-4 bg-gray-800/30 p-4 rounded-2xl border border-gray-800/50">
                           <div className="flex items-center justify-between">
                              <span className="text-[10px] font-bold text-gray-400 uppercase">Text Color</span>
                              <div className="flex items-center gap-3">
-                                <input type="color" value={textColor} onChange={e => setTextColor(e.target.value)} className="w-8 h-8 rounded-full border-2 border-white/20 p-0 overflow-hidden bg-transparent" />
+                                <div className="w-8 h-8 rounded-full border border-gray-600 overflow-hidden relative">
+                                  <input type="color" value={textColor} onChange={e => setTextColor(e.target.value)} className="absolute inset-0 w-[150%] h-[150%] -top-[25%] -left-[25%] p-0 cursor-pointer" />
+                                </div>
                                 <span className="text-[10px] font-mono text-gray-500 uppercase">{textColor}</span>
                              </div>
                           </div>
-                          <div className="space-y-3">
+                          <div className="space-y-3 pt-2 border-t border-gray-700/50">
                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-gray-400 uppercase">Stroke / Outline</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase">Stroke Width</span>
                                 <input type="range" min="0" max="15" step="1" value={strokeWidth} onChange={e => setStrokeWidth(parseInt(e.target.value))} className="w-32 h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-pink-500" />
                              </div>
                              {strokeWidth > 0 && (
-                               <div className="flex items-center justify-between pl-4">
-                                  <span className="text-[10px] text-gray-500 uppercase">Color</span>
-                                  <input type="color" value={strokeColor} onChange={e => setStrokeColor(e.target.value)} className="w-6 h-6 rounded-md bg-transparent border border-white/10" />
+                               <div className="flex items-center justify-between pl-2">
+                                  <span className="text-[10px] text-gray-500 uppercase">Stroke Color</span>
+                                  <div className="w-6 h-6 rounded border border-gray-600 overflow-hidden relative">
+                                     <input type="color" value={strokeColor} onChange={e => setStrokeColor(e.target.value)} className="absolute inset-0 w-[150%] h-[150%] -top-[25%] -left-[25%] p-0 cursor-pointer" />
+                                  </div>
                                </div>
                              )}
                           </div>
@@ -747,15 +895,17 @@ const App: React.FC = () => {
 
                     {/* Background */}
                     <section className="space-y-4">
-                       <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-xs font-black text-green-500 uppercase tracking-widest"><Square size={14} /> Background</div>
-                          <button onClick={() => setBgEnabled(!bgEnabled)}>{bgEnabled ? <ToggleRight size={32} className="text-green-500" /> : <ToggleLeft size={32} className="text-gray-700" />}</button>
+                       <div className="flex items-center justify-between border-b border-gray-800 pb-2">
+                          <div className="flex items-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest"><Square size={14} className="text-green-500" /> Background</div>
+                          <button onClick={() => setBgEnabled(!bgEnabled)}>{bgEnabled ? <ToggleRight size={28} className="text-green-500" /> : <ToggleLeft size={28} className="text-gray-700" />}</button>
                        </div>
                        {bgEnabled && (
-                         <div className="space-y-4 bg-gray-900/50 p-4 rounded-2xl border border-gray-800">
+                         <div className="space-y-4 bg-gray-800/30 p-4 rounded-2xl border border-gray-800/50 animate-in fade-in slide-in-from-top-2">
                             <div className="flex items-center justify-between">
                                <span className="text-[10px] font-bold text-gray-400 uppercase">BG Color</span>
-                               <input type="color" value={bgColor.startsWith('rgba') ? '#000000' : bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded-lg" />
+                               <div className="w-8 h-8 rounded border border-gray-600 overflow-hidden relative">
+                                   <input type="color" value={bgColor.startsWith('rgba') ? '#000000' : bgColor} onChange={e => setBgColor(e.target.value)} className="absolute inset-0 w-[150%] h-[150%] -top-[25%] -left-[25%] p-0 cursor-pointer" />
+                               </div>
                             </div>
                             <div className="space-y-2">
                                <label className="flex justify-between text-[10px] text-gray-500">Padding <span>{bgPadding}px</span></label>
@@ -771,15 +921,20 @@ const App: React.FC = () => {
 
                     {/* Position */}
                     <section className="space-y-4">
-                       <div className="flex items-center gap-2 text-xs font-black text-purple-500 uppercase tracking-widest"><MousePointer2 size={14} /> Position</div>
-                       <div className="space-y-4 bg-gray-900/50 p-4 rounded-2xl border border-gray-800">
+                       <div className="flex items-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest border-b border-gray-800 pb-2"><MousePointer2 size={14} className="text-purple-500" /> Layout</div>
+                       <div className="space-y-4 bg-gray-800/30 p-4 rounded-2xl border border-gray-800/50">
                           <div className="space-y-2">
-                             <label className="flex justify-between text-[10px] text-gray-500">Vertical <span>{verticalPos}%</span></label>
-                             <input type="range" min="5" max="95" step="1" value={verticalPos} onChange={e => setVerticalPos(parseInt(e.target.value))} className="w-full h-1 bg-gray-800 rounded-lg accent-purple-500" />
+                             <label className="flex justify-between text-[10px] text-gray-500">Vertical Position <span>{verticalPos}%</span></label>
+                             <input type="range" min="10" max="90" step="1" value={verticalPos} onChange={e => setVerticalPos(parseInt(e.target.value))} className="w-full h-1 bg-gray-800 rounded-lg accent-purple-500 cursor-pointer" />
+                             <div className="flex justify-between text-[9px] text-gray-600 px-1">
+                                <span>Top</span>
+                                <span>Center</span>
+                                <span>Bottom</span>
+                             </div>
                           </div>
-                          <div className="space-y-2">
-                             <label className="flex justify-between text-[10px] text-gray-500">Horizontal <span>{horizontalPos}%</span></label>
-                             <input type="range" min="5" max="95" step="1" value={horizontalPos} onChange={e => setHorizontalPos(parseInt(e.target.value))} className="w-full h-1 bg-gray-800 rounded-lg accent-purple-500" />
+                          <div className="space-y-2 mt-4">
+                             <label className="flex justify-between text-[10px] text-gray-500">Horizontal Offset <span>{horizontalPos}%</span></label>
+                             <input type="range" min="10" max="90" step="1" value={horizontalPos} onChange={e => setHorizontalPos(parseInt(e.target.value))} className="w-full h-1 bg-gray-800 rounded-lg accent-purple-500 cursor-pointer" />
                           </div>
                        </div>
                     </section>
