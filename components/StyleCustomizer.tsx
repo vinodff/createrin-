@@ -1,5 +1,5 @@
 import React from 'react';
-import { Type, Palette, Square, MousePointer2, AlignLeft, AlignCenter, AlignRight, ToggleLeft, ToggleRight, Check } from 'lucide-react';
+import { Type, Palette, Square, MousePointer2, AlignLeft, AlignCenter, AlignRight, ToggleLeft, ToggleRight, Check, Play } from 'lucide-react';
 import TranscriptEditor from './TranscriptEditor';
 import { STYLES_CONFIG } from '../constants';
 import { CaptionStyle, Caption } from '../types';
@@ -43,6 +43,7 @@ interface StyleCustomizerProps {
   captions?: Caption[];
   updateCaption?: (id: string, updates: Partial<Caption>) => void;
   videoRef?: React.RefObject<HTMLVideoElement | null>;
+  onPreviewMode?: () => void;
 }
 
 const StyleCustomizer: React.FC<StyleCustomizerProps> = ({
@@ -82,17 +83,11 @@ const StyleCustomizer: React.FC<StyleCustomizerProps> = ({
   setHorizontalPos,
   captions = [],
   updateCaption,
-  videoRef
+  videoRef,
+  onPreviewMode
 }) => {
   return (
     <div className="flex flex-col h-full">
-      {/* Tab Header */}
-      <div className="flex border-b border-gray-800 bg-[#161616] sticky top-0 z-10">
-          <button onClick={() => setActiveTab('PRESETS')} className={`flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'PRESETS' ? 'text-white border-blue-500 bg-gray-800' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>Templates</button>
-          <button onClick={() => setActiveTab('DESIGN')} className={`flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'DESIGN' ? 'text-white border-blue-500 bg-gray-800' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>Customize</button>
-          <button onClick={() => setActiveTab('TRANSCRIPT')} className={`flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'TRANSCRIPT' ? 'text-white border-blue-500 bg-gray-800' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>Transcript</button>
-      </div>
-
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[#121212]">
         {activeTab === 'TRANSCRIPT' ? (
            updateCaption && videoRef ? (
@@ -102,6 +97,12 @@ const StyleCustomizer: React.FC<StyleCustomizerProps> = ({
            )
         ) : activeTab === 'PRESETS' ? (
           <div className="space-y-6">
+            <button
+              onClick={onPreviewMode}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black py-3 rounded-xl mb-4 transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+            >
+              <Play size={16} className="fill-white" /> Live Preview Mode
+            </button>
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {['ALL', 'TRENDING', 'BOLD', 'VIRAL', 'NEON', 'MINIMAL', 'ART', 'GLOW', 'HIGHLIGHT', 'KINETIC', 'CUSTOM'].map(cat => (
                 <button key={cat} onClick={() => setFilterCategory(cat)} className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all whitespace-nowrap ${filterCategory === cat ? 'bg-white text-black border-white' : 'bg-gray-800 text-gray-500 border-gray-700 hover:border-gray-500'}`}>{cat}</button>
@@ -109,79 +110,97 @@ const StyleCustomizer: React.FC<StyleCustomizerProps> = ({
             </div>
 
             {/* Style Grid */}
-            <div className="grid grid-cols-2 gap-3">
-              {Object.entries(STYLES_CONFIG)
-                .filter(([_, config]) => filterCategory === 'ALL' || config.category === filterCategory)
-                .map(([key, config]) => {
-                  const isNew = [
-                    'CAPCUT_CLASSIC','CAPCUT_BOLD_YELLOW','WORD_FIRE_POP','BOUNCE_WAVE','RAINBOW_BURST',
-                    'VIRAL_WORD_SLAM','KARAOKE_FIRE','WORD_CINEMATIC','MINIMAL_WORD_FADE','GRADIENT_SHIFT',
-                    'WORD_GLITTER','NEON_WORD_WAVE','WORD_SPOTLIGHT_REVEAL','WORD_SHAKE_IMPACT','WORD_OUTLINED_POP'
-                  ].includes(key);
-                  const sampleWord = config.displayMode === 'WORD' ? 'FIRE' : 'CAPTION';
-                  const categoryColors: Record<string, string> = {
-                    VIRAL: '#FF4500', TRENDING: '#1A5BFF', BOLD: '#FF0000', NEON: '#00FFFF',
-                    MINIMAL: '#888', ART: '#C084FC', GLOW: '#FFD700', KINETIC: '#FF6B00',
-                    HIGHLIGHT: '#22C55E', CUSTOM: '#6B7280'
-                  };
-                  const catColor = categoryColors[config.category] || '#888';
+            <div className="space-y-6">
+              {['TRENDING', 'BOLD', 'VIRAL', 'NEON', 'MINIMAL', 'ART', 'GLOW', 'HIGHLIGHT', 'KINETIC', 'CUSTOM']
+                .filter(cat => filterCategory === 'ALL' || filterCategory === cat)
+                .map(cat => {
+                  const templatesCat = Object.entries(STYLES_CONFIG).filter(([_, config]) => config.category === cat);
+                  if (templatesCat.length === 0) return null;
                   return (
-                    <button key={key} onClick={() => selectPreset(key as CaptionStyle)}
-                      className={`rounded-2xl border transition-all text-left group relative overflow-hidden ${
-                        currentStyle === key ? 'border-blue-500 ring-1 ring-blue-500 bg-gray-800' : 'bg-gray-900 border-gray-800 hover:border-gray-600 hover:scale-[1.02]'
-                      }`}
-                      style={{ transform: 'translateZ(0)' }}
-                    >
-                      {/* NEW Badge */}
-                      {isNew && (
-                        <div className="absolute top-2 right-2 z-10 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest shadow-lg">
-                          NEW
-                        </div>
+                    <div key={cat} className="space-y-3">
+                      {filterCategory === 'ALL' && (
+                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest border-b border-gray-800 pb-2">
+                          {cat}
+                        </h3>
                       )}
+                      <div className="grid grid-cols-2 gap-3">
+                        {templatesCat.map(([key, config]) => {
+                          const isNew = [
+                            'CAPCUT_CLASSIC','CAPCUT_BOLD_YELLOW','WORD_FIRE_POP','BOUNCE_WAVE','RAINBOW_BURST',
+                            'VIRAL_WORD_SLAM','KARAOKE_FIRE','WORD_CINEMATIC','MINIMAL_WORD_FADE','GRADIENT_SHIFT',
+                            'WORD_GLITTER','NEON_WORD_WAVE','WORD_SPOTLIGHT_REVEAL','WORD_SHAKE_IMPACT','WORD_OUTLINED_POP'
+                          ].includes(key);
+                          const sampleWord = config.displayMode === 'WORD' ? 'FIRE' : 'CAPTION';
+                          const categoryColors: Record<string, string> = {
+                            VIRAL: '#FF4500', TRENDING: '#1A5BFF', BOLD: '#FF0000', NEON: '#00FFFF',
+                            MINIMAL: '#888', ART: '#C084FC', GLOW: '#FFD700', KINETIC: '#FF6B00',
+                            HIGHLIGHT: '#22C55E', CUSTOM: '#6B7280'
+                          };
+                          const catColor = categoryColors[config.category] || '#888';
+                          const animationClass = config.displayMode === 'WORD' ? 'group-hover:animate-pulse' : 'group-hover:scale-110';
+                          return (
+                            <button key={key} onClick={() => selectPreset(key as CaptionStyle)}
+                              className={`rounded-2xl border transition-all text-left group relative overflow-hidden ${
+                                currentStyle === key ? 'border-blue-500 ring-1 ring-blue-500 bg-gray-800' : 'bg-gray-900 border-gray-800 hover:border-gray-600 hover:scale-[1.02]'
+                              }`}
+                              style={{ transform: 'translateZ(0)' }}
+                            >
+                              {/* NEW Badge */}
+                              {isNew && (
+                                <div className="absolute top-2 right-2 z-10 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest shadow-lg">
+                                  NEW
+                                </div>
+                              )}
 
-                      {/* Preview area */}
-                      <div
-                        className="w-full aspect-[2/1] flex items-center justify-center overflow-hidden"
-                        style={{
-                          background: config.gradientColors && config.gradientColors.length >= 2
-                            ? `linear-gradient(135deg, ${config.gradientColors.join(',')})`
-                            : `linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)`,
-                          borderRadius: '12px 12px 0 0'
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontFamily: config.fontFamily,
-                            fontSize: '22px',
-                            fontWeight: config.fontWeight || 900,
-                            color: config.activeTextColor || config.textColor,
-                            textShadow: config.shadowBlur
-                              ? `0 0 ${Math.min(config.shadowBlur, 20)}px ${config.shadowColor}`
-                              : 'none',
-                            WebkitTextStroke: config.strokeWidth && config.strokeWidth > 0
-                              ? `${Math.min(config.strokeWidth / 3, 2)}px ${config.strokeColor || '#000'}`
-                              : 'none',
-                            textTransform: config.uppercase ? 'uppercase' : 'none',
-                          }}
-                        >
-                          {sampleWord}
-                        </span>
-                      </div>
+                              {/* Preview area */}
+                              <div
+                                className="w-full aspect-[2/1] flex items-center justify-center overflow-hidden"
+                                style={{
+                                  background: config.gradientColors && config.gradientColors.length >= 2
+                                    ? `linear-gradient(135deg, ${config.gradientColors.join(',')})`
+                                    : `linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)`,
+                                  borderRadius: '12px 12px 0 0'
+                                }}
+                              >
+                                <span
+                                  className={`template-preview-span transition-all duration-300 ${animationClass}`}
+                                  data-animation={config.animation}
+                                  style={{
+                                    fontFamily: config.fontFamily,
+                                    fontSize: '22px',
+                                    fontWeight: config.fontWeight || 900,
+                                    color: config.activeTextColor || config.textColor,
+                                    textShadow: config.shadowBlur
+                                      ? `0 0 ${Math.min(config.shadowBlur, 20)}px ${config.shadowColor}`
+                                      : 'none',
+                                    WebkitTextStroke: config.strokeWidth && config.strokeWidth > 0
+                                      ? `${Math.min(config.strokeWidth / 3, 2)}px ${config.strokeColor || '#000'}`
+                                      : 'none',
+                                    textTransform: config.uppercase ? 'uppercase' : 'none',
+                                  }}
+                                >
+                                  {sampleWord}
+                                </span>
+                              </div>
 
-                      {/* Info row */}
-                      <div className="p-2.5">
-                        <p className={`text-[10px] font-bold uppercase truncate leading-tight ${
-                          currentStyle === key ? 'text-white' : 'text-gray-300'
-                        }`}>{config.name}</p>
-                        <div className="mt-1.5 flex gap-1 flex-wrap">
-                          <span
-                            className="text-[7px] px-1.5 py-0.5 rounded font-black uppercase"
-                            style={{ background: `${catColor}22`, color: catColor, border: `1px solid ${catColor}44` }}
-                          >{config.category}</span>
-                          <span className="text-[7px] px-1.5 py-0.5 rounded bg-black/30 text-gray-500 font-bold uppercase">{config.displayMode}</span>
-                        </div>
+                              {/* Info row */}
+                              <div className="p-2.5">
+                                <p className={`text-[10px] font-bold uppercase truncate leading-tight ${
+                                  currentStyle === key ? 'text-white' : 'text-gray-300'
+                                }`}>{config.name}</p>
+                                <div className="mt-1.5 flex gap-1 flex-wrap">
+                                  <span
+                                    className="text-[7px] px-1.5 py-0.5 rounded font-black uppercase"
+                                    style={{ background: `${catColor}22`, color: catColor, border: `1px solid ${catColor}44` }}
+                                  >{config.category}</span>
+                                  <span className="text-[7px] px-1.5 py-0.5 rounded bg-black/30 text-gray-500 font-bold uppercase">{config.displayMode}</span>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
             </div>

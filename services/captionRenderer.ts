@@ -370,15 +370,21 @@ export class CaptionRenderer {
     let wordProgress = 1;
 
     if (caption.words && caption.words.length === wordCount) {
-      activeWordIndex = caption.words.findIndex(w => renderTime >= w.start && renderTime <= w.end);
+      // ±60ms boundary buffer compensates for API timing imprecision
+      const TIMING_BUFFER = 0.06;
+      activeWordIndex = caption.words.findIndex(
+        w => renderTime >= w.start - TIMING_BUFFER && renderTime <= w.end + TIMING_BUFFER
+      );
       if (activeWordIndex !== -1) {
         const activeW = caption.words[activeWordIndex];
-        // Ease out quint slightly for the active word's life progress
-        wordProgress = Math.max(0, Math.min((renderTime - activeW.start) / (activeW.end - activeW.start), 1));
+        // Smooth ease-out progress within the word's lifetime
+        wordProgress = Math.max(0, Math.min((renderTime - activeW.start) / Math.max(activeW.end - activeW.start, 0.05), 1));
       } else {
-        // If not strictly inside any word, find latest word before renderTime
-        const passedWords = caption.words.filter(w => renderTime > w.end);
-        if (passedWords.length > 0) activeWordIndex = passedWords.length - 1; // last passed word
+        // Not inside any word window — use the most recently passed word
+        for (let i = caption.words.length - 1; i >= 0; i--) {
+          if (renderTime > caption.words[i].end) { activeWordIndex = i; break; }
+        }
+        wordProgress = 1;
       }
     } else {
       activeWordIndex = Math.min(Math.floor(captionProgress * wordCount), wordCount - 1);
@@ -387,8 +393,10 @@ export class CaptionRenderer {
       wordProgress = Math.max(0, Math.min((renderTime - wordStartTime) / wordDuration, 1));
     }
 
-    // Word highlight color palette for COLOR_POP mode
+    // Word highlight color palette for COLOR_POP / CONTEXTUAL mode
     const COLOR_POP_PALETTE = ['#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF', '#FF6BFF', '#FF9F43', '#00D2D3', '#FF4757'];
+    // Per-style color behavior (default: WORD_POP for backward-compat)
+    const colorBehavior = style.colorBehavior || 'WORD_POP';
 
     const drawWord = (word: string, x: number, y: number, active: boolean, idx: number) => {
       ctx.save();
@@ -456,45 +464,76 @@ export class CaptionRenderer {
         ctx.strokeText(word, 0, 0);
       }
 
-      // Fill — gradient support
+      // --- FILL LOGIC: governed by colorBehavior ---
       let fill: string | CanvasGradient;
-      if (active && style.activeTextColor) {
-        fill = style.activeTextColor;
-      } else if (style.gradientColors && style.gradientColors.length >= 2) {
-        const w = ctx.measureText(word).width;
-        const gradient = ctx.createLinearGradient(-w / 2, 0, w / 2, 0);
-        const stops = style.gradientColors.length;
-        style.gradientColors.forEach((color, i) => {
-          gradient.addColorStop(i / (stops - 1), color);
-        });
-        fill = gradient;
+
+      if (colorBehavior === 'FIXED') {
+        // FIXED: always use the style's static color or gradient — never transform per word
+        if (style.gradientColors && style.gradientColors.length >= 2) {
+          const wGrad = ctx.measureText(word).width;
+          const gradient = ctx.createLinearGradient(-wGrad / 2, 0, wGrad / 2, 0);
+          style.gradientColors.forEach((color, i) => {
+            gradient.addColorStop(i / (style.gradientColors!.length - 1), color);
+          });
+          fill = gradient;
+        } else {
+          fill = style.textColor;
+        }
+      } else if (colorBehavior === 'ACTIVE_ONLY') {
+        // ACTIVE_ONLY: inactive words are dim, active gets accent color
+        if (active && style.activeTextColor) {
+          fill = style.activeTextColor;
+        } else {
+          fill = style.textColor;
+          if (!active) ctx.globalAlpha = Math.min(ctx.globalAlpha, style.opacityInactive ?? 0.35);
+        }
+      } else if (colorBehavior === 'CONTEXTUAL') {
+        // CONTEXTUAL: use AI-assigned wordColors from transcript, fallback to COLOR_POP palette
+        if (caption.wordColors && caption.wordColors[idx] && caption.wordColors[idx] !== 'default') {
+          fill = caption.wordColors[idx];
+        } else {
+          fill = COLOR_POP_PALETTE[idx % COLOR_POP_PALETTE.length];
+        }
+        // Active word still gets accent if defined
+        if (active && style.activeTextColor) fill = style.activeTextColor;
       } else {
-        fill = style.textColor;
+        // WORD_POP (default): active word gets accent color, inactive uses textColor or gradient
+        if (active && style.activeTextColor) {
+          fill = style.activeTextColor;
+        } else if (style.gradientColors && style.gradientColors.length >= 2) {
+          const wGrad = ctx.measureText(word).width;
+          const gradient = ctx.createLinearGradient(-wGrad / 2, 0, wGrad / 2, 0);
+          style.gradientColors.forEach((color, i) => {
+            gradient.addColorStop(i / (style.gradientColors!.length - 1), color);
+          });
+          fill = gradient;
+        } else {
+          fill = style.textColor;
+        }
+        // User-set word color overrides (Transcript Editor) — only for WORD_POP
+        if (caption.wordColors && caption.wordColors[idx] && caption.wordColors[idx] !== 'default') {
+          fill = caption.wordColors[idx];
+        }
       }
 
-      // Word-level custom color overrides (from Transcript Editor or AI)
-      if (caption.wordColors && caption.wordColors[idx] && caption.wordColors[idx] !== 'default') {
-        fill = caption.wordColors[idx];
-      }
+      // --- GLOBAL Word Highlight Mode (from AnimationPanel) — overrides colorBehavior ---
 
-      // Word Highlight Mode: COLOR_POP — each word gets a unique vibrant color
+      // Global highlight mode overrides (COLOR_POP, KARAOKE)
       if (wHighlight === 'COLOR_POP') {
         fill = COLOR_POP_PALETTE[idx % COLOR_POP_PALETTE.length];
       }
-
-      // Word Highlight Mode: KARAOKE (global) — active word gets accent color
       if (wHighlight === 'KARAOKE' && active) {
-        fill = '#FACC15'; // Yellow karaoke highlight
+        fill = '#FACC15';
       } else if (wHighlight === 'KARAOKE' && !active) {
         ctx.globalAlpha = Math.min(ctx.globalAlpha, 0.5);
       }
 
-      // Reset shadow before fill to avoid double-shadow
+      // Reset shadow before fill to avoid double-shadow on stroke
       ctx.shadowBlur = 0;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
 
-      // Re-apply shadow for fill
+      // Re-apply clean shadow for fill text
       if (style.shadowColor) {
         ctx.shadowColor = style.shadowColor;
         ctx.shadowBlur = (style.shadowBlur || 0) * scaleFactor;
@@ -617,35 +656,36 @@ export class CaptionRenderer {
     };
 
     if (style.displayMode === 'WORD') {
-      // CapCut-style 3-word context window: dim prev | ACTIVE | dim next
-      const prevIdx = activeWordIndex - 1;
-      const nextIdx = activeWordIndex + 1;
-
-      // Active word — centered
+      // Single-word mode: display the active word centered and large, with adjacent words transparently on the sides.
       if (activeWordIndex >= 0 && activeWordIndex < words.length) {
-        drawWord(words[activeWordIndex], anchorX, anchorY, true, activeWordIndex);
-      }
+        const prevWord = activeWordIndex > 0 ? words[activeWordIndex - 1] : '';
+        const currWord = words[activeWordIndex];
+        const nextWord = activeWordIndex < words.length - 1 ? words[activeWordIndex + 1] : '';
+        
+        const pad = spaceWidth * 1.5;
+        const wPrev = prevWord ? ctx.measureText(prevWord).width : 0;
+        const wCurr = ctx.measureText(currWord).width;
+        const wNext = nextWord ? ctx.measureText(nextWord).width : 0;
+        
+        const originalOpacity = style.opacityInactive;
+        const targetOpacity = originalOpacity ?? 0.3;
 
-      // Previous word — left of active, dimmed
-      if (prevIdx >= 0) {
-        ctx.save();
-        ctx.globalAlpha = 0.35;
-        const activeW = ctx.measureText(words[activeWordIndex] || '').width;
-        const prevW = ctx.measureText(words[prevIdx]).width;
-        const prevX = anchorX - (activeW / 2 + spaceWidth + prevW / 2) * 1.5;
-        drawWord(words[prevIdx], prevX, anchorY, false, prevIdx);
-        ctx.restore();
-      }
-
-      // Next word — right of active, dimmed
-      if (nextIdx < words.length) {
-        ctx.save();
-        ctx.globalAlpha = 0.35;
-        const activeW = ctx.measureText(words[activeWordIndex] || '').width;
-        const nextW = ctx.measureText(words[nextIdx]).width;
-        const nextX = anchorX + (activeW / 2 + spaceWidth + nextW / 2) * 1.5;
-        drawWord(words[nextIdx], nextX, anchorY, false, nextIdx);
-        ctx.restore();
+        if (prevWord) {
+          style.opacityInactive = targetOpacity;
+          // Position relative to current word's bounding box to prevent overlap when scaled
+          const scaleOffset = style.animation === 'POP' || style.animation === 'SCALE_UP' ? wCurr * 0.1 : 0;
+          drawWord(prevWord, anchorX - wCurr/2 - pad - wPrev/2 - scaleOffset, anchorY, false, activeWordIndex - 1);
+        }
+        
+        style.opacityInactive = originalOpacity; // restore for current word just in case
+        drawWord(currWord, anchorX, anchorY, true, activeWordIndex);
+        
+        if (nextWord) {
+          style.opacityInactive = targetOpacity;
+          const scaleOffset = style.animation === 'POP' || style.animation === 'SCALE_UP' ? wCurr * 0.1 : 0;
+          drawWord(nextWord, anchorX + wCurr/2 + pad + wNext/2 + scaleOffset, anchorY, false, activeWordIndex + 1);
+        }
+        style.opacityInactive = originalOpacity;
       }
     } else {
       // BLOCK mode — wrap text into lines

@@ -158,6 +158,13 @@ export interface ExportOptions {
   audioEnabled: boolean;
 }
 
+// Controls how each template handles word colors independently
+export type ColorBehavior =
+  | 'FIXED'         // Single color always (Minimal, Clean styles)
+  | 'ACTIVE_ONLY'   // Only active word gets accent color (Karaoke, Cinematic)
+  | 'WORD_POP'      // Active word pops with scale+color animation (Mr. Beast, Hormozi)
+  | 'CONTEXTUAL';   // Uses AI-assigned wordColors from transcript (Color Pop)
+
 export interface StyleConfig {
   name: string;
   category: StyleCategory;
@@ -184,6 +191,7 @@ export interface StyleConfig {
   animation: AnimationType;
   displayMode: DisplayMode;
   uppercase?: boolean;
+  colorBehavior?: ColorBehavior; // Per-template color logic
 }
 
 export interface ProcessingStats {

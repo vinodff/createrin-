@@ -38,3 +38,52 @@
     background: #555;
   }
 }
+
+/* Caption Template Card Hover Animations */
+.template-preview-span {
+  display: inline-block;
+  transform-origin: center;
+}
+
+.group:hover .template-preview-span[data-animation="SCALE_UP"] {
+  animation: hoverScaleUp 1s ease-in-out infinite alternate;
+}
+@keyframes hoverScaleUp {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.15); opacity: 1; }
+}
+
+.group:hover .template-preview-span[data-animation="POP"] {
+  animation: hoverPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite;
+}
+@keyframes hoverPop {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.group:hover .template-preview-span[data-animation="FADE_IN"] {
+  animation: hoverFadeIn 1.5s ease-in-out infinite alternate;
+}
+@keyframes hoverFadeIn {
+  0% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+.group:hover .template-preview-span[data-animation="SLIDE_UP"] {
+  animation: hoverSlideUp 1s ease-in-out infinite alternate;
+}
+@keyframes hoverSlideUp {
+  0% { transform: translateY(8px); opacity: 0.5; }
+  100% { transform: translateY(-5px); opacity: 1; }
+}
+
+.group:hover .template-preview-span[data-animation="TYPEWRITER"],
+.group:hover .template-preview-span[data-animation="WIPE_RIGHT"] {
+  animation: hoverTypewriter 1.5s steps(10) infinite;
+  white-space: nowrap;
+  overflow: hidden;
+}
+@keyframes hoverTypewriter {
+  0% { max-width: 0; }
+  60%, 100% { max-width: 100%; }
+}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Upload, Play, Pause, Download, Wand2, Type, Music, Video, Loader2, Grid, Zap, Smile, Sparkles, Maximize2, ArrowUpDown, Palette, ToggleLeft, ToggleRight, Camera, Move, Volume2, Scissors, Globe, AlignLeft, AlignCenter, AlignRight, Square, Layers, MousePointer2, RefreshCw, ChevronRight, Check, Image as ImageIcon, Share2, UploadCloud, Key, ChevronLeft, Smartphone, Undo, Redo, Menu, Settings2, ChevronDown, X, RotateCcw } from 'lucide-react';
+import { Upload, Play, Pause, Download, Wand2, Type, Music, Video, Loader2, Grid, Zap, Smile, Sparkles, Maximize2, ArrowUpDown, Palette, ToggleLeft, ToggleRight, Camera, Move, Volume2, Scissors, Globe, AlignLeft, AlignCenter, AlignRight, Square, Layers, MousePointer2, RefreshCw, ChevronRight, Check, Image as ImageIcon, Share2, UploadCloud, Key, ChevronLeft, Smartphone, Undo, Redo, Menu, Settings2, ChevronDown, X, RotateCcw, Youtube, Instagram } from 'lucide-react';
 import { Caption, CaptionStyle, ProcessingStatus, ProcessingStats, StyleConfig, DisplayMode, LanguageMode, TextAlign, EntryAnimation, ExitAnimation, WordHighlightMode, KineticMode, ExportOptions, StickerItem, AspectRatio } from './types';
 import { STYLES_CONFIG } from './constants';
 
@@ -103,6 +103,7 @@ const App: React.FC = () => {
   const [languageMode, setLanguageMode] = useState<LanguageMode>('AUTO');
   const [sfxVolume, setSfxVolume] = useState<'LOW' | 'MED' | 'HIGH'>('MED');
   const [showSafeZones, setShowSafeZones] = useState(false);
+  const [safeZonePlatform, setSafeZonePlatform] = useState<'SHORTS' | 'TIKTOK' | 'INSTAGRAM'>('SHORTS');
   const [playbackRate, setPlaybackRate] = useState(1);
 
   // CUSTOM DESIGN OVERRIDES
@@ -144,9 +145,33 @@ const App: React.FC = () => {
   const [keyboardShortcuts, setKeyboardShortcuts] = useState<Record<string, string>>({});
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('9:16');
   const [aspectRatioMenuOpen, setAspectRatioMenuOpen] = useState(false);
+  // Stores the detected language from the last generation (e.g. 'Hindi', 'Telugu') used to filter language options
+  const [detectedLanguage, setDetectedLanguage] = useState<string | undefined>(undefined);
 
   const updateCaption = useCallback((id: string, updates: Partial<Caption>) => {
-    setCaptions(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    setCaptions(prev => prev.map(c => {
+      if (c.id !== id) return c;
+      const newCaption = { ...c, ...updates };
+      
+      // If we are updating text but not explicitly updating words, 
+      // we need to recalculate the words array to match the new text
+      if (updates.text !== undefined && updates.words === undefined) {
+        const newText = updates.text;
+        const newWordsList = newText.trim().split(/\s+/).filter(w => w.length > 0);
+        const duration = newCaption.endTime - newCaption.startTime;
+        const wordDuration = newWordsList.length > 0 ? duration / newWordsList.length : 0;
+        
+        newCaption.words = newWordsList.map((wordText, i) => ({
+          text: wordText,
+          word: wordText, // Just in case some templates still expect .word
+          start: newCaption.startTime + (i * wordDuration),
+          end: newCaption.startTime + ((i + 1) * wordDuration),
+          confidence: 1
+        }));
+      }
+      
+      return newCaption;
+    }));
   }, []);
 
   // Phase 2: Caption split/delete/duplicate handlers
@@ -212,6 +237,63 @@ const App: React.FC = () => {
       videoRef.current.playbackRate = playbackRate;
     }
   }, [playbackRate, videoSrc, isPlaying]);
+
+  const startPreviewMode = async () => {
+    // 1. Load sample video if none exists
+    if (!videoSrc) {
+      try {
+        setStatus('IDLE');
+        let response = await fetch('/test video.mp4');
+        if (!response.ok) throw new Error('Local sample not found');
+        const blob = await response.blob();
+        const file = new File([blob], "test video.mp4", { type: "video/mp4" });
+        setVideoFile(file);
+        setVideoSrc(URL.createObjectURL(file));
+      } catch (e) {
+        console.error("Local sample failed, trying remote", e);
+        try {
+          const response = await fetch('https://storage.googleapis.com/generativeai-downloads/images/test%20video.mp4');
+          if (response.ok) {
+            const blob = await response.blob();
+            const file = new File([blob], "test video.mp4", { type: "video/mp4" });
+            setVideoFile(file);
+            setVideoSrc(URL.createObjectURL(file));
+          }
+        } catch (err) {
+          console.error("Sample video load failed completely", err);
+        }
+      }
+    }
+
+    // 2. Add sample captions if empty
+    if (captions.length === 0) {
+      setCaptions([
+        {
+          id: 'preview-1',
+          startTime: 0,
+          endTime: 3,
+          text: "Live preview activated! Look at these captions.",
+          words: [
+            { text: "Live", start: 0, end: 0.5 },
+            { text: "preview", start: 0.5, end: 1.0 },
+            { text: "activated!", start: 1.0, end: 1.6 },
+            { text: "Look", start: 1.6, end: 2.0 },
+            { text: "at", start: 2.0, end: 2.3 },
+            { text: "these", start: 2.3, end: 2.6 },
+            { text: "captions.", start: 2.6, end: 3.0 }
+          ]
+        }
+      ]);
+    }
+    
+    // 3. Play video
+    setIsPlaying(true);
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play().catch(console.error);
+    }
+    setActiveTab('PRESETS');
+  };
 
   const resetApiKey = () => {
     localStorage.removeItem('createrin_api_key');
@@ -311,6 +393,8 @@ const App: React.FC = () => {
         confidenceScore: avgConfidence,
         languageDetected: language
       });
+      // Store detected language for smart language filtering on next generation attempt
+      if (language) setDetectedLanguage(language);
       setStatus('READY');
       soundEngineRef.current.init();
     } catch (error) {
@@ -341,139 +425,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleExport = async () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas) return;
 
-    // 1. Setup State
-    setStatus('EXPORTING');
-    setIsPlaying(false);
-    setExportProgress(0);
-
-    // 2. Prepare Video - Force Seek to Start
-    video.pause();
-
-    // Explicitly wait for seek to complete
-    await new Promise<void>((resolve) => {
-      const onSeeked = () => {
-        video.removeEventListener('seeked', onSeeked);
-        resolve();
-      };
-      video.addEventListener('seeked', onSeeked);
-      video.currentTime = 0;
-    });
-
-    // Small buffer to ensure canvas is ready
-    await new Promise(r => setTimeout(r, 200));
-
-    // 3. Capture Streams
-    const canvasStream = canvas.captureStream(30); // 30 FPS
-
-    let audioStream: MediaStream | null = null;
-    try {
-      const vidAny = video as any;
-      if (vidAny.captureStream) {
-        audioStream = vidAny.captureStream();
-      } else if (vidAny.mozCaptureStream) {
-        audioStream = vidAny.mozCaptureStream();
-      }
-    } catch (e) {
-      console.warn("Audio capture not supported on this browser:", e);
-    }
-
-    // Compose final stream
-    const finalStream = new MediaStream();
-    canvasStream.getVideoTracks().forEach(track => finalStream.addTrack(track));
-    if (audioStream) {
-      audioStream.getAudioTracks().forEach(track => finalStream.addTrack(track));
-    }
-
-    // 4. Determine Codec
-    const mimeTypes = [
-      'video/webm;codecs=vp9,opus',
-      'video/webm;codecs=h264,opus',
-      'video/webm;codecs=vp8,opus',
-      'video/webm',
-      'video/mp4'
-    ];
-    const mimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type));
-
-    if (!mimeType) {
-      showToast("Your browser does not support video export. Please use Chrome or Edge.");
-      setStatus('READY');
-      return;
-    }
-
-    // 5. Setup Recorder
-    const mediaRecorder = new MediaRecorder(finalStream, {
-      mimeType,
-      videoBitsPerSecond: 8000000 // 8 Mbps
-    });
-
-    const chunks: Blob[] = [];
-
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) chunks.push(e.data);
-    };
-
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-      a.download = `createrin-export-${Date.now()}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-
-      // Bug 8 Fix: stop all audio stream tracks to avoid media stream memory leak
-      if (audioStream) {
-        audioStream.getTracks().forEach(t => t.stop());
-      }
-
-      // Cleanup
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
-
-      setStatus('READY');
-      video.currentTime = 0;
-      setIsPlaying(false);
-    };
-
-    mediaRecorder.onerror = (e) => {
-      console.error("Recording failed", e);
-      setStatus('READY');
-      showToast("Export failed. Please reload and try again.");
-    };
-
-    // Bug 7 Fix: guard against video not being buffered before playing
-    if (video.readyState < 2) {
-      showToast("Video not ready. Please wait a moment and try again.", 'info');
-      setStatus('READY');
-      return;
-    }
-
-    // 6. Start Recording
-    mediaRecorder.start();
-
-    // 7. Play Video
-    video.onended = () => {
-      mediaRecorder.stop();
-      video.onended = null;
-    };
-
-    try {
-      await video.play();
-    } catch (e) {
-      console.error("Export playback failed", e);
-      mediaRecorder.stop();
-      setStatus('READY');
-    }
-  };
 
   // --- CAPTION RENDERER (replaces the old 650-line drawCanvas) ---
   const renderFrame = useCallback(() => {
@@ -722,17 +674,62 @@ const App: React.FC = () => {
       const vidAny = video as any;
       if (vidAny.captureStream) audioStream = vidAny.captureStream();
       else if (vidAny.mozCaptureStream) audioStream = vidAny.mozCaptureStream();
-    } catch (e) { console.warn("Audio capture not supported:", e); }
+      
+      if (!audioStream || audioStream.getAudioTracks().length === 0) {
+        // Must create or reuse a shared AudioContext established during user interaction if possible, 
+        // but creating here is usually okay if we immediately resume it.
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        
+        // Ensure the context is running (fixes silent audio if context starts suspended)
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(console.error);
+        }
+
+        const destNode = audioCtx.createMediaStreamDestination();
+        if (!vidAny.__audioSourceNode) {
+          vidAny.__audioSourceNode = audioCtx.createMediaElementSource(video);
+          // Connect to destination so the user can hear it while exporting (optional, but good)
+          vidAny.__audioSourceNode.connect(audioCtx.destination);
+        }
+        vidAny.__audioSourceNode.connect(destNode);
+        audioStream = destNode.stream;
+      }
+    } catch (e) {
+      console.warn("Audio capture fallback failed, exporting video-only:", e);
+    }
 
     const finalStream = new MediaStream();
     canvasStream.getVideoTracks().forEach(track => finalStream.addTrack(track));
-    if (audioStream) audioStream.getAudioTracks().forEach(track => finalStream.addTrack(track));
+    if (audioStream) {
+      audioStream.getAudioTracks().forEach(track => finalStream.addTrack(track));
+    }
 
     const bitrateMap = { LOW: 2000000, MEDIUM: 5000000, HIGH: 8000000, ULTRA: 15000000 };
-    const mimeTypes = options.format === 'mp4'
-      ? ['video/mp4', 'video/webm;codecs=h264,opus', 'video/webm']
-      : ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
-    const mimeType = mimeTypes.find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
+    
+    // Better codec prioritization for broad compatibility
+    const baseMimeTypes = [
+      'video/mp4;codecs="avc1.42E01E,mp4a.40.2"', // Standard MP4 with H.264 & AAC
+      'video/webm;codecs="h264,opus"', // WebM with H264 is heavily supported in Chromium browsers
+      'video/webm;codecs="vp9,opus"',  // WebM with VP9
+      'video/webm;codecs="vp8,opus"',  // WebM with VP8
+      'video/mp4',
+      'video/webm;codecs="h264"',
+      'video/webm;codecs="vp9"',
+      'video/webm;codecs="vp8"',
+      'video/webm'
+    ];
+    
+    let mimeTypes = baseMimeTypes;
+    if (options.format === 'mp4') {
+      mimeTypes = [
+        'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
+        'video/mp4',
+        ...baseMimeTypes
+      ];
+    }
+    
+    // Fallback to empty string if none matched, browser will use default
+    const mimeType = mimeTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
 
     const mediaRecorder = new MediaRecorder(finalStream, { mimeType, videoBitsPerSecond: bitrateMap[options.bitrate] });
     const chunks: Blob[] = [];
@@ -743,10 +740,13 @@ const App: React.FC = () => {
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = `createrin-${options.resolution}-${Date.now()}.${options.format}`;
+      let ext = options.format;
+      if (mimeType.includes('webm')) ext = 'webm';
+      a.download = `createrin-${options.resolution}-${Date.now()}.${ext}`;
       document.body.appendChild(a);
       a.click();
-      // Bug 8 Fix: stop audio tracks to prevent memory leak
+      showToast('Export complete! Open with VLC or Chrome if your default player shows a codec error.', 'info');
+      // Stop audio tracks to prevent memory leak
       if (audioStream) audioStream.getTracks().forEach(t => t.stop());
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
       setStatus('READY');
@@ -754,7 +754,6 @@ const App: React.FC = () => {
       setIsPlaying(false);
       setIsExportPanelOpen(false);
     };
-    // Bug 14 Fix: replace alert with showToast
     mediaRecorder.onerror = () => { setStatus('READY'); showToast("Export failed. Please try again."); };
     mediaRecorder.start();
     video.onended = () => { mediaRecorder.stop(); video.onended = null; };
@@ -826,14 +825,14 @@ const App: React.FC = () => {
 
         {/* Center: Undo/Redo/Speed */}
         {status === 'READY' && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2">
             <button onClick={undoCaptions} disabled={!canUndo} title="Undo" className="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-30 transition-all text-gray-400 hover:text-white">
               <Undo size={14} />
             </button>
             <button onClick={redoCaptions} disabled={!canRedo} title="Redo" className="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-30 transition-all text-gray-400 hover:text-white">
               <Redo size={14} />
             </button>
-            <div className="h-4 w-px bg-gray-700 mx-1" />
+            <div className="h-4 w-px bg-gray-700 mx-0.5 md:mx-1" />
             <select
               value={playbackRate}
               onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
@@ -849,26 +848,27 @@ const App: React.FC = () => {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
-          <button onClick={resetApiKey} className="p-1.5 bg-gray-800 hover:bg-red-900/50 rounded-lg text-gray-500 hover:text-red-400 transition-colors" title="Reset API Key">
+          <button onClick={resetApiKey} className="hidden md:block p-1.5 bg-gray-800 hover:bg-red-900/50 rounded-lg text-gray-500 hover:text-red-400 transition-colors" title="Reset API Key">
             <Key size={12} />
           </button>
           {status === 'READY' && (
             <>
-              <button onClick={() => setIsSeoModalOpen(true)} className="flex items-center gap-1.5 bg-gray-800 text-white hover:bg-gray-700 px-3 py-1.5 rounded-lg font-bold transition-all text-xs border border-gray-700">
+              <button onClick={() => setIsSeoModalOpen(true)} className="hidden xl:flex items-center gap-1.5 bg-gray-800 text-white hover:bg-gray-700 px-3 py-1.5 rounded-lg font-bold transition-all text-xs border border-gray-700">
                 <Share2 size={13} /> SEO
               </button>
-              <button onClick={() => setIsPublisherOpen(true)} className="flex items-center gap-1.5 bg-blue-600 text-white hover:bg-blue-500 px-3 py-1.5 rounded-lg font-bold transition-all text-xs border border-blue-500">
+              <button onClick={() => setIsPublisherOpen(true)} className="hidden md:flex items-center gap-1.5 bg-blue-600 text-white hover:bg-blue-500 px-3 py-1.5 rounded-lg font-bold transition-all text-xs border border-blue-500">
                 <UploadCloud size={13} /> Publish
               </button>
-              <button onClick={() => setIsExportPanelOpen(true)} className="flex items-center gap-1.5 bg-white text-black hover:bg-gray-200 px-4 py-1.5 rounded-lg font-black transition-all text-xs shadow-lg active:scale-95">
-                <Download size={14} /> Export
+              <button onClick={() => setIsExportPanelOpen(true)} className="flex items-center gap-1.5 bg-white text-black hover:bg-gray-200 px-3 md:px-4 py-1.5 rounded-lg font-black transition-all text-xs shadow-lg active:scale-95">
+                <Download size={14} /> <span className="hidden sm:inline">Export</span>
               </button>
-              <button onClick={() => setIsShortcutPanelOpen(true)} className="flex items-center gap-1.5 bg-gray-800 text-white hover:bg-gray-700 px-3 py-1.5 rounded-lg font-bold transition-all text-xs border border-gray-700">
+              <button onClick={() => setIsShortcutPanelOpen(true)} className="hidden lg:flex items-center gap-1.5 bg-gray-800 text-white hover:bg-gray-700 px-3 py-1.5 rounded-lg font-bold transition-all text-xs border border-gray-700">
                 <Menu size={13} /> Shortcuts
               </button>
               <div className="relative">
-                <button onClick={() => setAspectRatioMenuOpen(!aspectRatioMenuOpen)} className="flex items-center gap-1.5 bg-gray-800 text-white hover:bg-gray-700 px-3 py-1.5 rounded-lg font-bold transition-all text-xs border border-gray-700">
-                  <Square size={13} /> {aspectRatio}
+                <button onClick={() => setAspectRatioMenuOpen(!aspectRatioMenuOpen)} className="flex items-center gap-1.5 bg-gray-800 text-white hover:bg-gray-700 px-2 md:px-3 py-1.5 rounded-lg font-bold transition-all text-xs border border-gray-700 max-w-[80px] md:max-w-none overflow-hidden">
+                  <Square size={13} className="flex-shrink-0" /> <span className="truncate hidden sm:inline">{aspectRatio}</span>
+
                   <ChevronDown size={10} className="ml-1" />
                 </button>
                 {aspectRatioMenuOpen && (
@@ -899,17 +899,19 @@ const App: React.FC = () => {
       {!activeFeature ? (
         <FeatureSelector setActiveFeature={setActiveFeature} />
       ) : (
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative bg-[#0a0a0a]">
           {/* Left Tools Panel (CapCut-style) */}
-          <ToolsPanel
-            activeTool={activeTool}
-            setActiveTool={setActiveTool}
-            hasVideo={!!videoSrc}
-            hasCaptions={captions.length > 0}
-          />
+          <div className="order-3 md:order-1 z-30 flex-shrink-0 w-full md:w-auto mt-auto md:mt-0">
+            <ToolsPanel
+              activeTool={activeTool}
+              setActiveTool={setActiveTool}
+              hasVideo={!!videoSrc}
+              hasCaptions={captions.length > 0}
+            />
+          </div>
 
           {/* Center: Video + Timeline */}
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="order-1 md:order-2 flex-1 flex flex-col overflow-hidden relative z-10 w-full">
             {/* Video Preview Area */}
             <div className="flex-1 flex items-center justify-center bg-[#050505] relative overflow-hidden">
               <div className="absolute inset-0 opacity-10 pointer-events-none"
@@ -932,6 +934,7 @@ const App: React.FC = () => {
                   captions={captions}
                   updateCaption={updateCaption}
                   showSafeZones={showSafeZones}
+                  safeZonePlatform={safeZonePlatform}
                   aspectRatio={aspectRatio}
                   stickers={stickers}
                   updateSticker={updateSticker}
@@ -940,13 +943,28 @@ const App: React.FC = () => {
 
                 {/* Safe Zones Toggle */}
                 {videoSrc && status === 'READY' && (
-                  <div className="absolute top-3 right-3 z-40">
+                  <div className="absolute top-3 right-3 z-40 flex items-center shadow-lg rounded-lg border border-white/10 overflow-hidden backdrop-blur-md">
                     <button
                       onClick={() => setShowSafeZones(!showSafeZones)}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors border shadow-lg ${showSafeZones ? 'bg-yellow-400 text-black border-yellow-500' : 'bg-black/60 text-white hover:bg-black/80 border-white/10 backdrop-blur-md'}`}
+                      title="Toggle Social Media Safe Zones"
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors ${showSafeZones ? 'bg-yellow-400 text-black' : 'bg-black/60 text-white hover:bg-black/80'}`}
                     >
-                      <Smartphone size={13} /> Safe Zones
+                      <Smartphone size={13} /> {showSafeZones ? 'Safe Zones ON' : 'Safe Zones'}
                     </button>
+                    {showSafeZones && (
+                      <div className="flex bg-black/80 items-center px-1 border-l border-white/10">
+                        {(['SHORTS', 'TIKTOK', 'INSTAGRAM'] as const).map(p => (
+                          <button
+                            key={p}
+                            onClick={() => setSafeZonePlatform(p)}
+                            className={`p-1.5 rounded transition-colors ${safeZonePlatform === p ? 'text-yellow-400 bg-white/10' : 'text-gray-400 hover:text-white'}`}
+                            title={p === 'SHORTS' ? 'YouTube Shorts' : p === 'TIKTOK' ? 'TikTok' : 'Instagram Reels'}
+                          >
+                            {p === 'SHORTS' ? <Youtube size={14} /> : p === 'TIKTOK' ? <Video size={14} /> : <Instagram size={14} />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -977,7 +995,10 @@ const App: React.FC = () => {
           </div>
 
           {/* Right Panel: Context-sensitive (CapCut-style) */}
-          <div className="w-[380px] bg-[#141414] border-l border-gray-800 flex flex-col z-20 flex-shrink-0 overflow-hidden">
+          <div className={`
+            ${(activeTool || (videoSrc && status === 'IDLE')) ? 'absolute md:relative inset-x-0 bottom-20 top-[45vh] md:top-[40vh] md:top-auto md:bottom-auto md:inset-auto' : 'hidden md:flex flex-1 md:flex-none'} 
+            order-2 md:order-3 w-full md:w-[380px] bg-[#141414] border-t md:border-t-0 md:border-l border-gray-800 flex flex-col z-40 md:z-20 flex-shrink-0 overflow-hidden rounded-t-2xl md:rounded-none shadow-[0_-10px_50px_rgba(0,0,0,0.8)] md:shadow-none transition-transform
+          `}>
 
             {/* Initial Generation State */}
             {videoSrc && status === 'IDLE' && (
@@ -989,29 +1010,30 @@ const App: React.FC = () => {
                 smartCompressionEnabled={smartCompressionEnabled}
                 setSmartCompressionEnabled={setSmartCompressionEnabled}
                 handleGenerateCaptions={handleGenerateCaptions}
+                detectedLanguage={detectedLanguage}
               />
             )}
 
             {status === 'READY' && (
               <>
                 {/* Tab bar for right panel */}
-                <div className="flex border-b border-gray-800 bg-[#141414] flex-shrink-0">
+                <div className="flex border-b border-gray-800 bg-[#141414] flex-shrink-0 overflow-x-auto custom-scrollbar">
                   {activeTool === 'STICKERS' ? (
                     <div className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-center text-white bg-gray-800/50">
                       Stickers & Overlay
                     </div>
                   ) : (
                     [
-                      { id: 'PRESETS', label: 'Styles' },
-                      { id: 'DESIGN', label: 'Design' },
+                      { id: 'PRESETS', label: 'Templates' },
+                      { id: 'DESIGN', label: 'Customize' },
                       { id: 'ANIMATE', label: 'Animate' },
                       { id: 'THEMES', label: 'Themes' },
-                      { id: 'TRANSCRIPT', label: 'Text' },
+                      { id: 'TRANSCRIPT', label: 'Transcript' },
                     ].map(tab => (
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === tab.id ? 'text-white border-blue-500 bg-gray-800/50' : 'text-gray-600 border-transparent hover:text-gray-400'}`}
+                        className={`flex-shrink-0 px-4 md:px-5 py-3.5 text-[11px] md:text-xs font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${activeTab === tab.id ? 'text-white border-blue-500 bg-gray-800/50' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
                       >
                         {tab.label}
                       </button>
@@ -1162,6 +1184,7 @@ const App: React.FC = () => {
                       captions={captions}
                       updateCaption={updateCaption}
                       videoRef={videoRef}
+                      onPreviewMode={startPreviewMode}
                     />
                   )}
                 </div>

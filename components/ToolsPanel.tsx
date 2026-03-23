@@ -34,9 +34,9 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
     };
 
     return (
-        <div className="w-16 bg-[#0f0f0f] border-r border-gray-800 flex flex-col items-center py-4 gap-1 z-20 flex-shrink-0">
+        <div className="w-full h-20 md:w-16 md:h-auto bg-[#0f0f0f] border-t md:border-t-0 md:border-r border-gray-800 flex flex-row md:flex-col items-center py-2 md:py-4 px-4 md:px-0 gap-3 md:gap-1 z-30 flex-shrink-0 overflow-x-auto md:overflow-visible overflow-y-hidden custom-scrollbar">
             {/* Logo mark */}
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center mb-4">
+            <div className="hidden md:flex w-8 h-8 rounded-lg bg-blue-600 items-center justify-center mb-4 flex-shrink-0">
                 <Layers size={16} className="text-white" />
             </div>
 
@@ -51,7 +51,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                         onClick={() => !isDisabled && handleToolClick(tool.id)}
                         disabled={isDisabled}
                         title={tool.label}
-                        className={`w-12 h-12 rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-all group relative ${isActive
+                        className={`w-12 h-12 flex-shrink-0 rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-all group relative ${isActive
                                 ? `${tool.activeColor} border-opacity-100`
                                 : isDisabled
                                     ? 'bg-transparent border-transparent opacity-30 cursor-not-allowed'
@@ -65,20 +65,23 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
 
                         {/* Active indicator */}
                         {isActive && (
-                            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-blue-500 rounded-l-full" />
+                            <>
+                                <div className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-blue-500 rounded-l-full" />
+                                <div className="block md:hidden absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-blue-500 rounded-t-full" />
+                            </>
                         )}
                     </button>
                 );
             })}
 
             {/* Spacer */}
-            <div className="flex-1" />
+            <div className="flex-1 hidden md:block" />
 
             {/* AI Magic button */}
             <button
                 disabled={!hasCaptions}
                 title="AI Magic"
-                className={`w-12 h-12 rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-all group ${hasCaptions
+                className={`w-12 h-12 flex-shrink-0 rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-all group ${hasCaptions
                         ? 'bg-gradient-to-b from-purple-600/20 to-blue-600/20 border-purple-500/30 hover:from-purple-600/30 hover:to-blue-600/30'
                         : 'bg-transparent border-transparent opacity-30 cursor-not-allowed'
                     }`}
